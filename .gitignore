@@ -1,0 +1,5 @@
+data/
+__pycache__/
+*.pyc
+cikti/risk_kartlari.html
+*.zip
