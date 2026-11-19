@@ -23,8 +23,12 @@ Samsung Innovation Campus (AI) capstone, in cooperation with Yeşilay. Author: Y
    Can't Pause or Save are pattern-specific. So the card uses:
    - keyword rules with negation handling per pattern (`src/15_kanitlar.py`), shown only when the
      rule reaches AUC ≥ 0.70, with review quotes as evidence;
-   - store signals (`src/21_magaza_sinyalleri.py`);
-   - the general model as a "second opinion" and for an extra screen-time warning.
+   - store signals (`src/21_magaza_sinyalleri.py`): App Store "Loot Boxes" advisory, Play
+     "Competitive multiplayer" category, paid "Remove ads" products; if Google Play says the game
+     has no ads, ad detections are dropped (only 5 of 186 such games had an ad trap by vote);
+   - the general model as a "second opinion" and for an extra screen-time warning; if the rule
+     score is yellow but the model says red, the card is raised to red (those games were 88% dark
+     in development, 86% in the test) and the card says why.
 3. Card colour = transparent weighted score (`src/18_kural_karti.py`): Variable Rewards 3;
    Advertisements, Wait To Play, Grinding 2; others 1. 0–1 green, 2–4 yellow, ≥ 5 red.
 4. The frozen system (`src/sistem.py`) is shared by the unvoted-game cards, the independent test
@@ -33,13 +37,34 @@ Samsung Innovation Campus (AI) capstone, in cooperation with Yeşilay. Author: Y
 ## Results
 | | Development (485 Play games, 5-fold CV) | Independent test (347 iOS-only games, frozen system) |
 |---|---|---|
-| Rule score AUC (dark game) | 0.867 | 0.856 |
+| Rule score AUC (dark game) | 0.861 | 0.856 |
 | General model AUC | 0.927 | 0.896 |
-| Dark share: green / yellow / red cards | 5% / 39% / 83% | 6% / 26% / 74% |
+| Dark share: green / yellow / red cards | 6% / 25% / 83% | 6% / 22% / 75% |
 
 - External check against researcher-coded loot box labels (Zendle et al. 2019, Xiao et al. 2021,
   OSF), 113 matched games: 90% of the card's Variable Rewards detections had loot boxes
   (`src/26_lootbox_dogrulama.py`).
+- **Real playtime check** (Open Play, Ballou et al. 2026; Steam logs of ~1,900 adults): 44 games
+  with a darkpattern.games card plus 37 Steam games not on the site at all, whose official Google
+  Play versions were carded by the frozen system (strict full-title matching, checked by hand).
+  Compared with the same player's other games, players spend ×0.85 the time on green-card games,
+  ×1.25 on yellow and ×1.78 on red – about 2× more on red than green (95% interval 1.4–3.1;
+  `src/35_gercek_sure.py`, `36_open_play_play`, `37_genis_sure_testi`, `38_beklenen_sure`).
+- A per-game "expected screen time" number was tried and not used: its typical error (×1.76) was
+  no better than the colour's, so the card keeps a colour-level time sentence.
+- **Turkish reviews** (`39`–`42`): a model trained on ~200 Turkish Play reviews per game reaches
+  AUC 0.866 (English 0.919 on the same 408 games). Adding Turkish did not improve the card – the
+  two-language model average was lower (0.906), and Turkish keyword rules changed only 3 of 51
+  independent-test games – so the card stays English-based.
+
+## For families (Yeşilay)
+Each card also has a "For families" box (`src/aile.py`); it never changes the colour:
+- Google Play age rating, and a "child-targeted" note when the store description explicitly
+  addresses children ("perfect for kids", "for toddlers", "ages 4+"; negated phrases ignored).
+- A short, practical tip for every detected trap (e.g. ads: prefer the ad-free version or play
+  offline in airplane mode; loot boxes: lock in-app purchases and set a spending limit).
+- For yellow/red games: up to three green-card games of the same Play genre with an age rating no
+  stricter than the original (rated ≥ 4.0, most installed first).
 - Adding the 347 iOS games to training changed Play AUC by only +0.003 on average
   (`src/27_ios_ekleme_kontrolu.py`), so the system was kept as is and the test set stays clean.
 
@@ -56,6 +81,8 @@ Samsung Innovation Campus (AI) capstone, in cooperation with Yeşilay. Author: Y
 | Store signals | `21_magaza_sinyalleri`, `22_sinyal_karsilastir` |
 | Independent test | `23_bagimsiz_test`, `25_ogrenilen_olasilik`, `26_lootbox_dogrulama`, `27_ios_ekleme_kontrolu` |
 | Live demo | `24_demo` |
+| Later checks | `28`–`32` (sentence pilot, Can't Pause rule, review count), `34`–`38` (Open Play: problem gaming, real playtime), `39`–`42` (Turkish reviews) |
+| For families | `aile` (age rating, child note, parent tips, green alternatives) |
 
 Code comments and console output are in Turkish.
 

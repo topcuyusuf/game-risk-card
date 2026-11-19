@@ -40,7 +40,7 @@ def main():
     tablo = pd.read_pickle(VERI / "oyun_tablosu.pkl").set_index("oyun_id")
     skor = pd.read_csv(VERI / "risk_skorlari.csv", dtype={"oyun_id": str}).set_index("oyun_id")
 
-    df = pd.DataFrame([{"oyun_id": k["oyun_id"], "model_renk": k["model_renk"],
+    df = pd.DataFrame([{"oyun_id": k["oyun_id"], "model_renk": k["model_renk"], "kart_renk": k["renk"],
                         "puan": sum(AGIRLIK[t] for t in tespit_edilenler(k))} for k in kartlar])
     df = df.set_index("oyun_id")
     df["karanlik"] = skor["genel_gercek"]
@@ -62,7 +62,8 @@ def main():
     df.to_csv(VERI / "kural_puanlari.csv", encoding="utf-8")
 
     sira = ["yesil", "sari", "kirmizi"]
-    for ad, sutun in (("MODEL rengi", "model_renk"), ("KURAL rengi", "kural_renk")):
+    for ad, sutun in (("MODEL rengi", "model_renk"), ("KURAL rengi", "kural_renk"),
+                      ("KART rengi (kural; sarı + model kırmızı -> kırmızı)", "kart_renk")):
         print(f"\n{ad}:")
         print(df.groupby(sutun).agg(oyun=("puan", "size"), karanlik=("karanlik", "mean"),
                                     gercek_agirlikli=("gercek_agirlikli", "mean"))

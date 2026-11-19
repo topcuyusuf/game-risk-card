@@ -17,6 +17,7 @@ ilk_model = importlib.import_module("10_ilk_model")
 risk = importlib.import_module("14_risk_skoru")
 kanitlar = importlib.import_module("15_kanitlar")
 kart_mod = importlib.import_module("16_kart")
+import aile
 
 ONBELLEK = VERI / "model" / "sistem.joblib"
 
@@ -36,7 +37,8 @@ def sistemi_egit():
     oran = pd.DataFrame({f"t{t}": {o: v[str(t)]["eslesen_yorum"] / max(v[str(t)]["toplam_yorum"], 1)
                                   for o, v in kanit_eski.items()} for t in kart_mod.HEDEF_TUZAKLAR})
     return {"modeller": modeller, "karne": kart_mod.kural_karnesi(t_idx, skor, oran),
-            "renk_olcegi": pd.read_json(VERI / "renk_olcegi.json", typ="series")}
+            "renk_olcegi": pd.read_json(VERI / "renk_olcegi.json", typ="series"),
+            "sure_olcegi": kart_mod.sure_olcegi_oku(), "alternatifler": aile.alternatif_oku()}
 
 
 def sistemi_yukle(yeniden=False):
@@ -58,6 +60,8 @@ def kart_uret(sistem, oyun_id, ad, yorumlar, aciklama="", magaza=None):
     kanit_oyun = kanitlar.oyun_kanitlari(kanitlar.yorumlari_sirala(yorumlar), aciklama)
     k = kart_mod.kart_kur(oyun_id, ad, s, kanit_oyun, sistem["karne"], magaza)
     k["renk_aciklama"] = kart_mod.renk_cumlesi(k["renk"], sistem["renk_olcegi"])
+    k["sure_aciklama"] = kart_mod.sure_cumlesi(k["renk"], sistem.get("sure_olcegi"))
     k["genel_olas"] = round(s["genel_olas"], 2)
     k["yorum_sayisi"] = len(yorumlar)
+    aile.ekle(k, magaza, aciklama, sistem.get("alternatifler", []))   # çocuk bilgisi, ipuçları, alternatifler
     return k

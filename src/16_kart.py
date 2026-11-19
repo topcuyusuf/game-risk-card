@@ -19,6 +19,7 @@ from ortak import HEDEF_TUZAKLAR, VERI
 
 # Ağırlıklı kural (ağırlıklar, puan, renk eşikleri) 18. adımda tanımlı; aynısını kullanıyoruz.
 kural = importlib.import_module("18_kural_karti")
+import aile                      # 5. iyileştirme adımı: çocuk bilgisi, ebeveyn ipuçları, yeşil alternatifler
 
 CIKTI = VERI / "kartlar.jsonl"
 UYARI_ESIK = 0.5
@@ -92,6 +93,11 @@ def oku():
         for satir in open(VERI / "magaza_sinyal.jsonl", encoding="utf-8"):
             m = json.loads(satir)
             magaza[m["oyun_id"]] = m
+    # Google Play "Contains ads" bilgisi (6. adımda toplanmıştı)
+    for satir in open(VERI / "play_bilgi.jsonl", encoding="utf-8"):
+        p = json.loads(satir)
+        if p["oyun_id"] in magaza and p.get("containsAds") is not None:
+            magaza[p["oyun_id"]]["play_reklam"] = p["containsAds"]
     return tablo, skor, kanit, ad, magaza
 
 
@@ -119,6 +125,27 @@ def renk_cumlesi(renk, renk_olcegi):
             f"doğruladığı oran: %{100 * renk_olcegi[renk]:.0f}")
 
 
+def sure_olcegi_oku():
+    """38. adımın sonucu: renk başına gerçek oynama süresi katı (yoksa None)."""
+    yol = VERI / "sure_olcegi.json"
+    return json.load(open(yol, encoding="utf-8")) if yol.exists() else None
+
+
+def sure_cumlesi(renk, olcek):
+    """Kartın rengini gerçek oynama süresiyle anlatır (Open Play, Steam; 35-38. adımlar). %5'e yuvarlanır."""
+    if not olcek:
+        return None
+    kat = olcek["kat"][renk]
+    if kat < 0.9:
+        ne = f"yaklaşık %{round((1 - kat) * 20) * 5} daha az"
+    elif kat > 1.1:
+        ne = f"yaklaşık %{round((kat - 1) * 20) * 5} daha fazla"
+    else:
+        ne = "yaklaşık aynı"
+    return (f"Gerçek oynama kayıtlarında (Steam, {olcek['oyun']} oyun) oyuncular bu renkteki oyunlara, "
+            f"kendi diğer oyunlarına göre {ne} zaman ayırıyor.")
+
+
 def kart_kur(oyun_id, ad, s, kanit_oyun, karne, magaza=None):
     """TEK bir oyunun kartı.
     s: model puanları (renk, reklam_olas, durdurma_olas) | kanit_oyun: 15. adımın tuzak kanıtları
@@ -132,7 +159,10 @@ def kart_kur(oyun_id, ad, s, kanit_oyun, karne, magaza=None):
         kart["uyarilar"].append({"tuzak": HEDEF_TUZAKLAR[13], "dil": "yüksek olasılık",
                                  "puan": round(float(s["reklam_olas"]), 2)})
     if s["durdurma_olas"] >= UYARI_ESIK:
-        kart["uyarilar"].append({"tuzak": HEDEF_TUZAKLAR[28], "dil": "olası",
+        # 29. adım: oyuncuların bu oyu 'gerçek zamanlı çevrim içi oyun' anlamına geliyor; açıklama buna göre.
+        kart["uyarilar"].append({"tuzak": HEDEF_TUZAKLAR[28],
+                                 "dil": "olası — yorumlar gerçek zamanlı çevrim içi bir oyuna işaret ediyor "
+                                        "(maç ya da saldırı sırasında oyun duraklatılamaz)",
                                  "puan": round(float(s["durdurma_olas"]), 2)})
 
     for t, k in karne.items():
@@ -149,17 +179,33 @@ def kart_kur(oyun_id, ad, s, kanit_oyun, karne, magaza=None):
     kart["tespitler"].sort(key=lambda d: -d["eslesen"])
     kart["magaza_kanit"] = magaza_kanitlari(magaza)
 
+    # Reklam filtresi (28. adım): Google Play "Contains ads" demiyorsa reklam tespiti düşer.
+    # Reklamsız görünen oyunların ~%97'sinde oyuncular da reklam tuzağı görmemiş. Bilgi yoksa dokunulmaz.
+    kart["reklamsiz"] = bool(magaza) and magaza.get("play_reklam") is False
+    if kart["reklamsiz"]:
+        kart["uyarilar"] = [u for u in kart["uyarilar"] if u["tuzak"] != HEDEF_TUZAKLAR[13]]
+        kart["tespitler"] = [d for d in kart["tespitler"] if d["tuzak_id"] != 13]
+        kart["magaza_kanit"] = [m for m in kart["magaza_kanit"] if m["tuzak_id"] != 13]
+
     # ANA RENK: ağırlıklı kural puanı (karar: kural rengi, model ikinci görüş)
     tespit = sorted(kural.tespit_edilenler(kart), key=lambda t: -kural.AGIRLIK[t])
     kart["puan"] = sum(kural.AGIRLIK[t] for t in tespit)
     kart["puan_en_fazla"] = sum(kural.AGIRLIK.values())
     kart["puan_dokumu"] = [{"tuzak": HEDEF_TUZAKLAR[t], "agirlik": kural.AGIRLIK[t]} for t in tespit]
-    kart["renk"] = kural.kural_rengi(kart["puan"])
-    # İkinci görüş notu: sadece model ile kural tam zıt düşerse (yeşil <-> kırmızı)
-    zit = {kart["renk"], kart["model_renk"]} == {"yesil", "kirmizi"}
-    kart["ikinci_gorus"] = (f"Yorumların genel tonuna bakan model bu oyunu "
-                            f"{RENK_ADI[kart['model_renk']]} görüyor; sonuç belirsiz olabilir."
-                            if zit else None)
+    kart["kural_renk"] = kural.kural_rengi(kart["puan"])
+    kart["renk"] = kart["kural_renk"]
+    kart["ikinci_gorus"] = None
+    # Model yükseltmesi (33. adım): kural SARI, model KIRMIZI ise kart KIRMIZI.
+    # Bu oyunların %88'i (geliştirme, 43 oyun) ve %86'sı (bağımsız test, 7 oyun) gerçekten tuzaklı:
+    # tuzaklar yorumlarda anahtar kelimelerle anlatılmıyor ama model genel tondan seziyor (ör. Brawl Stars).
+    if kart["kural_renk"] == "sari" and kart["model_renk"] == "kirmizi":
+        kart["renk"] = "kirmizi"
+        kart["ikinci_gorus"] = (f"Tuzak puanı {kart['puan']} (SARI), ancak yorumların genel tonuna bakan model "
+                                f"bu oyunu KIRMIZI görüyor; kart kırmızıya yükseltildi.")
+    # İkinci görüş notu: model ile kural tam zıt düşerse (yeşil <-> kırmızı) renk değişmez, not düşülür
+    elif {kart["renk"], kart["model_renk"]} == {"yesil", "kirmizi"}:
+        kart["ikinci_gorus"] = (f"Yorumların genel tonuna bakan model bu oyunu "
+                                f"{RENK_ADI[kart['model_renk']]} görüyor; sonuç belirsiz olabilir.")
 
     # Ekran süresi uyarısı: renk aynı kalır, sadece yeşil/sarıya not düşülür.
     kart["ekran_suresi_uyarisi"] = (zamansal_nedenler(kart)
@@ -176,13 +222,28 @@ def main():
     kartlar = [kart_kur(oyun_id, ad[oyun_id], skor.loc[oyun_id], kanit[oyun_id], karne, magaza.get(oyun_id))
                for oyun_id in tablo.index]
 
+    # Aile ekleri (renk değişmez): Play yaş derecesi/türü + yeşil alternatif tablosu
+    play = {}
+    for satir in open(VERI / "play_bilgi.jsonl", encoding="utf-8"):
+        p = json.loads(satir)
+        if p.get("durum") == "yayinda":
+            play[p["oyun_id"]] = p
+    alt_tablo = aile.alternatif_tablosu(kartlar, play)
+    json.dump(alt_tablo, open(aile.ALTERNATIF_DOSYA, "w", encoding="utf-8"), ensure_ascii=False)
+    for kart in kartlar:
+        p = play.get(kart["oyun_id"], {})
+        aile.ekle(kart, {"play_yas": p.get("contentRating"), "play_tur": p.get("genreId"), "play_id": p.get("play_id")},
+                  tablo.loc[kart["oyun_id"], "aciklama"], alt_tablo)
+
     # Renk ölçeği: her KURAL renginin geçmişte gerçekleşen 'karanlık' oranı (kartın ilk cümlesi).
     kural_renk = pd.Series({k["oyun_id"]: k["renk"] for k in kartlar})
     renk_olcegi = skor["genel_gercek"].groupby(kural_renk).mean()
     renk_olcegi.to_json(VERI / "renk_olcegi.json")            # Yeni oyunların kartı için saklanır
+    sure_olcegi = sure_olcegi_oku()
     with open(CIKTI, "w", encoding="utf-8") as f:
         for kart in kartlar:
             kart["renk_aciklama"] = renk_cumlesi(kart["renk"], renk_olcegi)
+            kart["sure_aciklama"] = sure_cumlesi(kart["renk"], sure_olcegi)
             f.write(json.dumps(kart, ensure_ascii=False) + "\n")
 
     # --- Sınama ---

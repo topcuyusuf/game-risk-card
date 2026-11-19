@@ -75,6 +75,12 @@ blockquote { margin: 6px 0; padding: 4px 0 4px 12px; border-left: 3px solid var(
 .yildiz { color: var(--soluk); font-size: 12px; white-space: nowrap; }
 .aciklama { color: var(--soluk); font-size: 13px; margin: 2px 0 6px; overflow-wrap: anywhere; }
 .bos { color: var(--soluk); font-size: 14px; margin: 6px 0 0; }
+.aile { background: var(--zemin); border: 1px solid var(--cizgi); border-radius: 8px; padding: 8px 12px;
+        margin: 12px 0 0; font-size: 14px; }
+.aile b { display: block; margin: 4px 0 2px; }
+.aile ul { margin: 0 0 4px; padding-left: 18px; }
+.aile a { color: inherit; }
+.aile .soluk { color: var(--soluk); font-size: 13px; }
 footer { max-width: 860px; margin: 0 auto; padding: 0 16px 32px; color: var(--soluk); font-size: 13px; }
 .daha { display: block; margin: 16px auto; padding: 10px 16px; border-radius: 8px; cursor: pointer;
         border: 1px solid var(--cizgi); background: var(--kart); color: var(--metin); font-size: 14px; }
@@ -99,7 +105,8 @@ footer { max-width: 860px; margin: 0 auto; padding: 0 16px 32px; color: var(--so
 </header>
 <p class="kural">Renk kuralı: tespit edilen her tuzak ağırlığı kadar puan ekler —
   Variable Rewards 3; Advertisements, Wait To Play, Grinding 2; diğerleri 1.
-  0–1 puan yeşil, 2–4 sarı, 5 ve üstü kırmızı.</p>
+  0–1 puan yeşil, 2–4 sarı, 5 ve üstü kırmızı.
+  Puan sarıya düştüğü hâlde yorumların genel tonuna bakan model oyunu kırmızı görüyorsa kart kırmızı olur.</p>
 <main id="liste"></main>
 <footer>
   Kartlar oyuncu yorumlarından otomatik çıkarılmıştır; kesin hüküm değildir.
@@ -138,12 +145,14 @@ function kartCiz(k) {
     puan.append(document.createTextNode(" — " + k.puan_dokumu.map(p => `${p.tuzak} (${p.agirlik})`).join(" + ")));
   }
   kart.append(puan, el("p", "oran", k.renk_aciklama));
+  if (k.sure_aciklama) kart.append(el("p", "oran", "⏱ " + k.sure_aciklama));
   if (k.ikinci_gorus) kart.append(el("p", "not", "ⓘ " + k.ikinci_gorus));
 
-  if (k.magaza_kanit.length) {
+  if (k.magaza_kanit.length || k.reklamsiz) {
     const kutu = el("div", "magaza"); kutu.append(el("b", "", "🏷 Mağaza kanıtı"));
     const ul = el("ul");
     k.magaza_kanit.forEach(m => ul.append(el("li", "", `${m.tuzak}: ${m.kanit}`)));
+    if (k.reklamsiz) ul.append(el("li", "", "Google Play: “reklam içermiyor” (reklam tuzağı sayılmadı)"));
     kutu.append(ul); kart.append(kutu);
   }
   if (k.uyarilar.length) {
@@ -174,7 +183,45 @@ function kartCiz(k) {
     if (d.aciklamada) t.append(el("p", "aciklama", `Oyun açıklamasında: “${d.aciklamada}”`));
     kart.append(t);
   });
+  const aile = aileKutusu(k);
+  if (aile) kart.append(aile);
   return kart;
+}
+
+// Aileler için: çocuk bilgisi, tuzak başına ipucu, aynı türde yeşil alternatifler (rengi değiştirmez)
+function aileKutusu(k) {
+  const c = k.cocuk || {}, ip = k.ipuclari || [], alt = k.alternatifler || [];
+  if (!c.yas && !c.hedef && !ip.length && !alt.length) return null;
+  const kutu = el("div", "aile"); kutu.append(el("b", "", "👪 Aileler için"));
+  if (c.hedef) {
+    let m = `Çocuklara yönelik: mağaza açıklaması “…${c.alinti}…” diyor.`;
+    if (k.renk !== "yesil") m += " Çocukların bu tür tasarımlar karşısında kendini durdurması daha zordur; aşağıdaki önerilere özellikle dikkat edin.";
+    kutu.append(el("p", "", m));
+  } else if (c.yas) {
+    kutu.append(el("p", "soluk", `Google Play yaş derecesi: ${c.yas_tr}` + (c.her_yas ? " — çocuklar da indirebilir." : "")));
+  }
+  if (ip.length) {
+    const ul = el("ul");
+    ip.forEach(i => { const li = el("li"); li.append(el("strong", "", i.tuzak + ": "), document.createTextNode(i.ipucu)); ul.append(li); });
+    kutu.append(ul);
+  }
+  if (alt.length) {
+    kutu.append(el("b", "", "Aynı türde yeşil kartlı oyunlar"));
+    const ul = el("ul");
+    alt.forEach(a => {
+      const li = el("li");
+      if (/^[\w.]+$/.test(a.play_id)) {
+        const link = el("a", "", a.ad);
+        link.href = "https://play.google.com/store/apps/details?id=" + a.play_id;
+        link.target = "_blank"; link.rel = "noopener noreferrer";
+        li.append(link);
+      } else li.append(document.createTextNode(a.ad));
+      li.append(el("span", "soluk", ` · ★ ${sayi(a.puan)} · ${a.yas_tr || ""}${a.ucretsiz ? "" : " · ücretli"}`));
+      ul.append(li);
+    });
+    kutu.append(ul, el("p", "soluk", "Yeşil: yorumlarda az tuzak bulundu demektir, tamamen tuzaksız demek değildir."));
+  }
+  return kutu;
 }
 
 function ciz() {
@@ -216,8 +263,10 @@ def main():
     # Sayfada sadece gerekli alanlar: oyun_id ve iç puanlar dışarıda kalır.
     sade = [{
         "ad": k["ad"], "renk": k["renk"], "renk_aciklama": k["renk_aciklama"],
+        "sure_aciklama": k.get("sure_aciklama"),
         "puan": k["puan"], "puan_en_fazla": k["puan_en_fazla"], "puan_dokumu": k["puan_dokumu"],
         "ikinci_gorus": k["ikinci_gorus"], "oysuz": k.get("oysuz", False),
+        "reklamsiz": k.get("reklamsiz", False),
         "magaza_kanit": [{"tuzak": m["tuzak"], "kanit": m["kanit"]} for m in k.get("magaza_kanit", [])],
         "uyarilar": [{"tuzak": u["tuzak"], "dil": u["dil"]} for u in k["uyarilar"]],
         "ekran_suresi_uyarisi": k["ekran_suresi_uyarisi"],
@@ -225,6 +274,7 @@ def main():
                        "toplam": d["toplam"], "kat": d["kat"], "aciklamada": d["aciklamada"],
                        "alintilar": [{"metin": a["metin"], "yildiz": a["yildiz"]} for a in d["alintilar"]]}
                       for d in k["tespitler"]],
+        "cocuk": k.get("cocuk"), "ipuclari": k.get("ipuclari", []), "alternatifler": k.get("alternatifler", []),
     } for k in kartlar]
 
     # '</' dizisi veri içinde script etiketini erken kapatmasın diye kaçırılır.
