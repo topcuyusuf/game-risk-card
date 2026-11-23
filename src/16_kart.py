@@ -45,7 +45,7 @@ EK_UYARI_RENKLERI = {"yesil", "sari"}
 
 # Mağaza sinyalleri (21-22. adım): oya ve yoruma bağlı olmayan, şirket beyanı / mağaza bilgisi.
 # Sadece oyuncu oylarıyla güçlü örtüşen üç sinyal kullanılır (bkz. data/sonuclar_magaza_sinyal.csv).
-REKLAM_URUNU = re.compile(r"remove ads?|no ads?|ad[- ]?free|ads?", re.I)
+REKLAM_URUNU = re.compile(r"\bads?\b|\bno[- ]?ads?\b|remove[- ]?ads?(?![a-z])|\bad[- ]?free\b", re.I)
 REKABET_KATEGORI = ("Competitive multiplayer", "Competitive")
 
 

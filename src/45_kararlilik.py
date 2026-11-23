@@ -3,7 +3,7 @@
 Sorun (32. adım): aynı oyunun ortak yorumu olmayan iki 200'lük örneği, oyunların %13'ünde farklı renk veriyor.
 Çözüm: kart üretilirken yorumlar yerine koyarak yeniden örneklenir (bootstrap, 15 kez) ve renk her seferinde
 yeniden hesaplanır (sistem.kararlilik). Renk tekrarların %90'ından azında aynı çıkarsa kart "sınırda" notu alır
-(eşik bu dosyanın eşik denemesiyle seçildi: 0.8 farklı renk verenlerin %44'ünü, 0.9 %72'sini yakalıyor).
+(eşik bu dosyanın eşik denemesiyle seçildi: 0.8 farklı renk verenlerin %43'ünü, 0.9 %71'ini yakalıyor).
 
 Sınama (bu dosya): 400 yorumu olan geliştirme oyunları, 32. adımdaki gibi 5 katlı düzen (modeller o oyunu görmez).
   A = rastgele 200 yorum, B = kalan 200 yorum (ortak yorum yok).

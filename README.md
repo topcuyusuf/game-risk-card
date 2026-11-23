@@ -37,9 +37,9 @@ Samsung Innovation Campus (AI) capstone, in cooperation with Yeşilay. Author: Y
 ## Results
 | | Development (485 Play games, 5-fold CV) | Independent test (347 iOS-only games, frozen system) |
 |---|---|---|
-| Rule score AUC (dark game) | 0.861 | 0.856 |
-| General model AUC | 0.927 | 0.896 |
-| Dark share: green / yellow / red cards | 6% / 25% / 83% | 6% / 22% / 75% |
+| Rule score AUC (dark game) | 0.861 | 0.855 |
+| General model AUC | 0.927 | 0.895 |
+| Dark share: green / yellow / red cards | 6% / 25% / 83% | 6% / 21% / 75% |
 
 - External check against researcher-coded loot box labels (Zendle et al. 2019, Xiao et al. 2021,
   OSF), 113 matched games: 90% of the card's Variable Rewards detections had loot boxes
@@ -48,16 +48,20 @@ Samsung Innovation Campus (AI) capstone, in cooperation with Yeşilay. Author: Y
   with a darkpattern.games card plus 37 Steam games not on the site at all, whose official Google
   Play versions were carded by the frozen system (strict full-title matching, checked by hand).
   Compared with the same player's other games, players spend ×0.85 the time on green-card games,
-  ×1.25 on yellow and ×1.78 on red – about 2× more on red than green (95% interval 1.4–3.1;
+  ×1.20 on yellow and ×1.78 on red – about 2× more on red than green (95% interval 1.4–3.1;
   `src/35_gercek_sure.py`, `36_open_play_play`, `37_genis_sure_testi`, `38_beklenen_sure`).
 - **Colour stability** (`src/45_kararlilik.py`): two disjoint 200-review samples of the same game give
   the same colour for about 9 in 10 games. Each card is re-scored on 15 bootstrap resamples of its reviews;
   if fewer than 90% agree, it shows a "colour is borderline" note. On 473 games with 400 reviews (5-fold),
   marked cards (26%) kept their colour on a disjoint sample in 75% of cases, unmarked ones in 97%.
 - Extra Wait To Play / Grinding phrases ("bonus lives", "stuck on the same level") were tried and not used
-  (`src/46_kural_genisletme.py`): card-score AUC 0.861 → 0.861 (dev), 0.856 → 0.855 (test).
+  (`src/46_kural_genisletme.py`): card-score AUC 0.861 → 0.861 (dev), 0.855 → 0.854 (test).
+- **Bug fix** (`src/47_reklam_urunu.py`): a broken word-boundary pattern missed ad-removal products such as
+  "Ad Removal" and "No-Ads Offer". Restoring the pattern chosen in step 22 gave 12 more games this evidence
+  (7 development, 5 test). No development colour changed; two test games moved from green to yellow, so the test
+  AUC went from 0.856 to 0.855. All numbers in this README use the corrected version.
 - A per-game "expected screen time" number was tried and not used: its typical error (×1.76) was
-  no better than the colour's, so the card keeps a colour-level time sentence.
+  about the same as the colour's (×1.77), so the card keeps a colour-level time sentence.
 - **Turkish reviews** (`39`–`42`): a model trained on ~200 Turkish Play reviews per game reaches
   AUC 0.866 (English 0.919 on the same 408 games). Adding Turkish did not improve the card – the
   two-language model average was lower (0.906), and Turkish keyword rules changed only 3 of 51
@@ -91,7 +95,7 @@ Each card also has a "For families" box (`src/aile.py`); it never changes the co
 | Store signals | `21_magaza_sinyalleri`, `22_sinyal_karsilastir` |
 | Independent test | `23_bagimsiz_test`, `25_ogrenilen_olasilik`, `26_lootbox_dogrulama`, `27_ios_ekleme_kontrolu` |
 | Live demo | `24_demo` |
-| Later checks | `28`–`32` (sentence pilot, Can't Pause rule, review count), `34`–`38` (Open Play: problem gaming, real playtime), `39`–`42` (Turkish reviews), `45`–`46` (colour stability, rule extension) |
+| Later checks | `28`–`32` (sentence pilot, Can't Pause rule, review count), `34`–`38` (Open Play: problem gaming, real playtime), `39`–`42` (Turkish reviews), `45`–`47` (colour stability, rule extension, ad-product fix) |
 | For families | `aile` (age rating, child note, parent tips, green alternatives) |
 
 Code comments and console output are in Turkish.
