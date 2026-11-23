@@ -60,6 +60,9 @@ Samsung Innovation Campus (AI) capstone, in cooperation with Yeşilay. Author: Y
   "Ad Removal" and "No-Ads Offer". Restoring the pattern chosen in step 22 gave 12 more games this evidence
   (7 development, 5 test). No development colour changed; two test games moved from green to yellow, so the test
   AUC went from 0.856 to 0.855. All numbers in this README use the corrected version.
+- **Live demo input** (`src/48_canli_magaza_farki.py`): the live demo reads Google Play only, not App Store signals. Without
+  them, on the 485 development cards the rule-score AUC is 0.833 instead of 0.861 and 34 cards (7%) get a milder colour
+  (dark share: green 9%, yellow 32%, red 84%). The test results above describe the full system.
 - A per-game "expected screen time" number was tried and not used: its typical error (×1.76) was
   about the same as the colour's (×1.77), so the card keeps a colour-level time sentence.
 - **Turkish reviews** (`39`–`42`): a model trained on ~200 Turkish Play reviews per game reaches
@@ -95,7 +98,7 @@ Each card also has a "For families" box (`src/aile.py`); it never changes the co
 | Store signals | `21_magaza_sinyalleri`, `22_sinyal_karsilastir` |
 | Independent test | `23_bagimsiz_test`, `25_ogrenilen_olasilik`, `26_lootbox_dogrulama`, `27_ios_ekleme_kontrolu` |
 | Live demo | `24_demo`, `arayuz.html` (collectible-style card interface) |
-| Later checks | `28`–`32` (sentence pilot, Can't Pause rule, review count), `34`–`38` (Open Play: problem gaming, real playtime), `39`–`42` (Turkish reviews), `45`–`47` (colour stability, rule extension, ad-product fix) |
+| Later checks | `28`–`32` (sentence pilot, Can't Pause rule, review count), `34`–`38` (Open Play: problem gaming, real playtime), `39`–`42` (Turkish reviews), `45`–`48` (colour stability, rule extension, ad-product fix, live input check) |
 | For families | `aile` (age rating, child note, parent tips, green alternatives) |
 
 Code comments and console output are in Turkish.
