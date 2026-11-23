@@ -23,6 +23,7 @@ import requests
 from google_play_scraper import Sort, app, reviews
 from google_play_scraper.exceptions import NotFoundError
 
+import aile
 import sistem as sistem_mod
 from ortak import VERI
 
@@ -38,6 +39,8 @@ DAKIKADA_ISTEK = 6               # bir adresten dakikada en çok 6 kart
 AYNI_ANDA = threading.Semaphore(3)   # aynı anda en çok 3 Play çekimi
 ONBELLEK, ISTEKLER = {}, {}
 SISTEM = sistem_mod.sistemi_yukle()
+_ikon_dosya = VERI / "model" / "yesil_ikonlar.json"      # öneri kartlarının görselleri (dosya yoksa harf gösterilir)
+YESIL_IKON = json.load(open(_ikon_dosya, encoding="utf-8")) if _ikon_dosya.exists() else {}
 PAKET = re.compile(r"^[A-Za-z][\w]*(\.[A-Za-z_][\w]*)+$")
 KAYIT = VERI / "demo_kayit.csv"          # her isteğin kaydı (izleme için); yorum metni yazılmaz
 KAYIT_KILIDI = threading.Lock()
@@ -150,6 +153,12 @@ def kart_hazirla(q):
     k["oysuz"] = False
     ikon = bilgi.get("icon") or ""
     k["ikon"] = ikon if IKON.match(ikon) else None
+    if k["renk"] == "kirmizi":                        # kırmızı kartta en çok 3 yeşil öneri
+        k["alternatifler"] = aile.yesil_oneriler(SISTEM.get("alternatifler"), k.get("alternatifler"),
+                                                 bilgi.get("genreId"), bilgi.get("contentRating"), paket)
+    for a in k.get("alternatifler", []):
+        u = YESIL_IKON.get(a["play_id"]) or ""
+        a["ikon"] = u if IKON.match(u) else None
     return k
 
 

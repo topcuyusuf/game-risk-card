@@ -76,7 +76,7 @@ body, [data-renk="yesil"] { --r: var(--yesil); --rz: var(--yesil-zemin); --ry: v
 .kutu { position: relative; container-type: inline-size; min-width: 0; }
 .kutu.vurgulu .oyun-karti { animation: cevir .55s ease-out; }
 @keyframes cevir { from { transform: perspective(900px) rotateY(-85deg); opacity: .4; } to { transform: perspective(900px) rotateY(0); opacity: 1; } }
-.ac { position: absolute; inset: 0; z-index: 3; width: 100%; height: 100%; padding: 0; border: 0; background: transparent; cursor: pointer; border-radius: 5cqw; }
+.ac { position: absolute; inset: 0 0 auto 0; z-index: 3; width: 100%; height: auto; aspect-ratio: 5 / 7; padding: 0; border: 0; background: transparent; cursor: pointer; border-radius: 5cqw; }
 .ac:focus-visible { outline: 3px solid var(--vurgu); outline-offset: 3px; }
 .oyun-karti { position: relative; display: flex; flex-direction: column; width: 100%; aspect-ratio: 5 / 7; padding: 4cqw; overflow: hidden;
   color: #2a2115; border-radius: 4.8cqw; border: 1px solid rgba(0,0,0,.45);
@@ -248,6 +248,47 @@ form { width: 100%; max-width: 680px; margin: 0 auto; }
 #btn:disabled { opacity: .68; cursor: wait; }
 .tuzak-ad { min-width: 0; }
 .tuzak-ad small { display: block; color: var(--soluk); font-size: 12px; font-weight: 400; line-height: 1.25; }
+.bilgi { max-width: 860px; margin: 2px auto 22px; background: var(--kart); border: 1px solid var(--cizgi); border-radius: 14px; box-shadow: var(--golge); }
+.bilgi summary { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 7px 16px; cursor: pointer; list-style: none; font-size: 17px; font-weight: 700; border-radius: 14px; }
+.bilgi summary::-webkit-details-marker { display: none; }
+.bilgi-simge { flex: none; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--vurgu); color: var(--vurgu-yazi); font-size: 16px; font-weight: 800; }
+.bilgi-ok { margin-left: auto; color: var(--soluk); font-size: 20px; line-height: 1; transition: transform .15s; }
+.bilgi[open] .bilgi-ok { transform: rotate(180deg); }
+.bilgi-ic { padding: 0 18px 16px; }
+.bilgi-giris { margin: 0 0 14px; font-size: 15.5px; line-height: 1.55; }
+.adimlar { counter-reset: adim; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 0 0 12px; padding: 0; list-style: none; }
+.adimlar li { counter-increment: adim; position: relative; padding: 10px 12px 10px 46px; background: var(--kart2); border: 1px solid var(--cizgi); border-radius: 10px; }
+.adimlar li::before { content: counter(adim); position: absolute; left: 11px; top: 11px; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--vurgu); color: var(--vurgu-yazi); font-size: 14px; font-weight: 800; }
+.adimlar b { display: block; font-size: 14.5px; line-height: 1.3; }
+.adimlar span { display: block; margin-top: 2px; color: var(--soluk); font-size: 13px; line-height: 1.35; }
+.renkler { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
+.renkler li { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; padding: 10px 12px; background: var(--rz); border-left: 4px solid var(--r); border-radius: 8px; font-size: 13.5px; line-height: 1.35; }
+.renkler .rozet { background: var(--kart); }
+.bilgi-not { margin: 12px 0 0; color: var(--soluk); font-size: 13px; text-align: center; }
+@media (max-width: 720px) {
+  .bilgi-ic { padding: 0 14px 14px; }
+  .adimlar, .renkler { grid-template-columns: minmax(0, 1fr); gap: 7px; }
+  .renkler li { flex-direction: row; align-items: center; gap: 9px; }
+  .renkler .rozet { flex: none; min-width: 84px; justify-content: center; }
+  .bilgi-giris { font-size: 14.5px; line-height: 1.48; margin-bottom: 10px; }
+  .adimlar li { padding: 7px 10px 7px 42px; min-height: 40px; display: flex; align-items: center; }
+  .adimlar li::before { top: 7px; left: 9px; }
+  .adimlar span { display: none; }
+  .renkler li { padding: 7px 9px; font-size: 13px; }
+  .bilgi-not { margin-top: 9px; font-size: 12.5px; }
+}
+.yesil-dugme { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 46px; margin-top: 9px; padding: 5px 11px 5px 7px; border: 1px solid var(--yesil); border-radius: 11px;
+  background: var(--yesil-zemin); color: var(--yesil-yazi); font-size: 13.5px; font-weight: 700; text-align: left; }
+.yesil-dugme:hover { filter: brightness(.97); }
+.mini-ikonlar { flex: none; display: flex; }
+.mini-ikonlar .ikon { --rz: var(--kart); --ry: var(--yesil-yazi); width: 32px; height: 32px; margin-left: -9px; border-radius: 9px; border: 2px solid var(--yesil-zemin); font-size: 13px; }
+.mini-ikonlar .ikon:first-child { margin-left: 0; }
+.yesil-dugme .ok { margin-left: auto; font-size: 17px; }
+.yesil-bolum { margin-top: 10px; padding: 13px !important; background: var(--yesil-zemin); border: 1px solid var(--yesil) !important; border-radius: 12px; }
+.yesil-bolum h3 { color: var(--yesil-yazi); font-size: 14px; text-transform: none; letter-spacing: 0; }
+.yesil-bolum .alts a, .yesil-bolum .alts div { background: var(--kart); }
+.oneri-turu { display: inline-block; margin-top: 3px; padding: 0 6px; border-radius: 5px; background: var(--yesil-zemin); color: var(--yesil-yazi); font-size: 11px; font-weight: 700; }
+.alts > div { display: flex; align-items: center; gap: 9px; min-height: 58px; padding: 7px; border: 1px solid var(--cizgi); border-radius: 10px; min-width: 0; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 </style>
 </head>
@@ -265,6 +306,23 @@ form { width: 100%; max-width: 680px; margin: 0 auto; }
     <div class="oneri" id="oneri"></div>
     <p class="durum" id="durum" role="status"></p>
   </header>
+  <details class="bilgi" id="bilgi" open>
+    <summary><span class="bilgi-simge" aria-hidden="true">?</span><span>Nedir bu Oyun Risk Kartı?</span><span class="bilgi-ok" aria-hidden="true">⌄</span></summary>
+    <div class="bilgi-ic">
+      <p class="bilgi-giris">Bazı mobil oyunlar, seni ekranda daha uzun tutmak için <b>tasarım tuzakları</b> kullanır: günlük ödüller, bekleme süreleri, rastgele ödül sandıkları gibi. <b>Oyun Risk Kartı</b>, bir oyunun oyuncu yorumlarını okuyup bu tuzakları arar ve sonucu tek bir renkle gösterir.</p>
+      <ol class="adimlar">
+        <li><b>Oyunun adını yaz</b><span>ya da Google Play bağlantısını yapıştır.</span></li>
+        <li><b>Yorumlar okunsun</b><span>Yeni bir oyun yaklaşık 20 saniye sürebilir.</span></li>
+        <li><b>Kartını gör</b><span>Karta tıklayınca nedenini ve aile önerilerini oku.</span></li>
+      </ol>
+      <ul class="renkler">
+        <li data-renk="yesil"><span class="rozet"><span>✓</span><span>YEŞİL</span></span><span>Az tuzak bulundu; tamamen tuzaksız demek değil.</span></li>
+        <li data-renk="sari"><span class="rozet"><span>!</span><span>SARI</span></span><span>Bazı tuzaklar var; oynarken süreye dikkat et.</span></li>
+        <li data-renk="kirmizi"><span class="rozet"><span>▲</span><span>KIRMIZI</span></span><span>Tuzak riski yüksek; süre sınırı koymak iyi olur.</span></li>
+      </ul>
+      <p class="bilgi-not">Kart bir tahmindir, oyun hakkında kesin hüküm değildir. Amaç oyunları yasaklamak değil, bilinçli seçim yapmana yardımcı olmak.</p>
+    </div>
+  </details>
   <div class="arac">
     <span id="filtreler" style="display:contents"></span>
     <span class="sayac" id="sayac"></span>
@@ -411,6 +469,16 @@ function kucukKart(k) {
   x.setAttribute("aria-label", `${k.ad} kartını kapat`);
   x.addEventListener("click", () => kapat(k));
   a.append(oyunKarti(k), ac, x);
+  const oneriler = k.renk === "kirmizi" ? (k.alternatifler || []) : [];
+  if (oneriler.length) {
+    const y = el("button", "yesil-dugme"); y.type = "button";
+    y.setAttribute("aria-label", `${k.ad} yerine ${oneriler.length} yeşil kartlı oyun önerisini gör`);
+    const mini = el("span", "mini-ikonlar");
+    oneriler.slice(0, 3).forEach(o => mini.append(gorsel(o.ikon ? o : null, o.ad)));
+    y.append(mini, el("span", "", `${oneriler.length} yeşil öneri`), el("span", "ok", "›"));
+    y.addEventListener("click", () => paneliAc(k, true));
+    a.append(y);
+  }
   return a;
 }
 function ciz() {
@@ -523,7 +591,26 @@ function bolum(baslik) {
   s.append(el("h3", "", baslik));
   return s;
 }
-function paneliAc(k) {
+function oneriListesi(liste) {
+  const al = el("div", "alts");
+  liste.forEach(a => {
+    const icerik = el("span", "m", a.ad), bilgi = [];
+    if (a.puan) bilgi.push("★ " + sayi(a.puan));
+    if (a.yas_tr) bilgi.push(a.yas_tr);
+    if (a.ucretsiz === false) bilgi.push("ücretli");
+    icerik.append(el("small", "", bilgi.join(" · ")));
+    if (a.genel !== undefined) icerik.append(el("span", "oneri-turu", a.genel ? "Genel öneri" : "Benzer oyun"));
+    const satir = /^[\w.]+$/.test(a.play_id || "") ? el("a") : el("div");
+    if (satir.tagName === "A") {
+      satir.href = "https://play.google.com/store/apps/details?id=" + a.play_id;
+      satir.target = "_blank"; satir.rel = "noopener noreferrer";
+    }
+    satir.append(gorsel(a.ikon ? a : null, a.ad), icerik);
+    al.append(satir);
+  });
+  return al;
+}
+function paneliAc(k, oneriyeGit) {
   const p = $("panel"); p.replaceChildren(); p.dataset.renk = k.renk;
   const b = el("div", "pb"), m = el("div");
   m.style.minWidth = "0";
@@ -546,6 +633,17 @@ function paneliAc(k) {
   }
   if (k.not_) s1.append(el("p", "kucuk-not", k.not_));
   g.append(s1);
+  const kirmiziOneri = k.renk === "kirmizi" && (k.alternatifler || []).length > 0;
+  let oneriBolumu = null;
+  if (kirmiziOneri) {
+    oneriBolumu = el("section", "bolum yesil-bolum");
+    oneriBolumu.append(el("h3", "", "✓ Bunun yerine deneyebileceğin yeşil oyunlar"), oneriListesi(k.alternatifler));
+    const genelVar = k.alternatifler.some(a => a.genel);
+    oneriBolumu.append(el("p", "kucuk-not", (genelVar ? "Genel öneriler bu oyuna benzemeyebilir; yeşil kartlı, yaşa uygun ve puanı yüksek oyunlardır. " : "") +
+      "Yeşil: yorumlarda az tuzak bulundu demektir, tamamen tuzaksız demek değildir."));
+    oneriBolumu.lastChild.style.margin = "8px 0 0";
+    g.append(oneriBolumu);
+  }
 
   const liste = tuzaklar(k), s2 = bolum(liste.length ? `Tespit edilen tuzaklar (${liste.length})` : "Tespit edilen tuzaklar");
   if (!liste.length) s2.append(el("p", "", "Yorumlarda belirgin bir tuzak kanıtı bulunmadı."));
@@ -596,27 +694,12 @@ function paneliAc(k) {
       ip.forEach(i => { const li = el("li"); li.append(el("b", "", trAd(i.tuzak) + ": "), document.createTextNode(i.ipucu)); u.append(li); });
       s4.append(u);
     }
-    if (alts.length) {
+    if (alts.length && !kirmiziOneri) {
       const b2 = el("p", "", "Benzer yeşil kartlı oyunlar");
       b2.style.cssText = "margin:10px 0 0;font-weight:600";
-      const al = el("div", "alts");
-      alts.forEach(a => {
-        const icerik = el("span", "m", a.ad), bilgi = [];
-        if (a.puan) bilgi.push("★ " + sayi(a.puan));
-        if (a.yas_tr) bilgi.push(a.yas_tr);
-        if (a.ucretsiz === false) bilgi.push("ücretli");
-        icerik.append(el("small", "", bilgi.join(" · ")));
-        const satir = /^[\w.]+$/.test(a.play_id || "") ? el("a") : el("div");
-        if (satir.tagName === "A") {
-          satir.href = "https://play.google.com/store/apps/details?id=" + a.play_id;
-          satir.target = "_blank"; satir.rel = "noopener noreferrer";
-        }
-        satir.append(gorsel(null, a.ad), icerik);
-        al.append(satir);
-      });
-      s4.append(b2, al, el("p", "kucuk-not", "Yeşil: yorumlarda az tuzak bulundu demektir, tamamen tuzaksız demek değildir."));
+      s4.append(b2, oneriListesi(alts), el("p", "kucuk-not", "Yeşil: yorumlarda az tuzak bulundu demektir, tamamen tuzaksız demek değildir."));
       s4.lastChild.style.marginTop = "8px";
-    } else if (k.renk !== "yesil" && c.yas) {
+    } else if (!alts.length && k.renk !== "yesil" && c.yas) {
       s4.append(el("p", "kucuk-not", "Bu oyuna yeterince benzeyen yeşil kartlı bir oyun bulamadık."));
     }
     g.append(s4);
@@ -632,6 +715,7 @@ function paneliAc(k) {
   p.append(x, b, govde);
   p.showModal();
   g.scrollTop = 0; govde.scrollTop = 0;
+  if (oneriyeGit && oneriBolumu) oneriBolumu.scrollIntoView({ block: "start" });
 }
 const egilme = matchMedia("(hover: hover) and (prefers-reduced-motion: no-preference)");
 $("izgara").addEventListener("pointermove", e => {
@@ -674,6 +758,11 @@ $("tema").addEventListener("click", () => {
 let kayitliTema = null;
 try { kayitliTema = localStorage.getItem(TEMA); } catch (e) { /* depolama kapalı */ }
 temaYaz(kayitliTema === "dark" || kayitliTema === "light" ? kayitliTema : null);
+const BILGI = "oyun-risk-bilgi-kapali";
+try { if (localStorage.getItem(BILGI) === "1") $("bilgi").open = false; } catch (e) { /* depolama kapalı: kart açık kalır */ }
+$("bilgi").addEventListener("toggle", () => {
+  try { localStorage.setItem(BILGI, $("bilgi").open ? "0" : "1"); } catch (e) { /* tercih yalnızca bu oturumda kalır */ }
+});
 const on = $("oneri");
 on.append(el("span", "", "Örnek:"));
 ORNEKLER.forEach(([ad, paket]) => {

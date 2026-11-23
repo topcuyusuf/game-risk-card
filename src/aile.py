@@ -158,6 +158,24 @@ def alternatifler(tablo, tur, yas, haric=None, aciklama="", kategoriler=(), adet
              "yas_tr": YAS_TR.get(a["yas"], a["yas"]), "benzerlik": round(b, 2)} for _, _, b, a in aday[:adet]]
 
 
+def yesil_oneriler(tablo, mevcut, tur, yas, haric=None, adet=3):
+    """Canlı demodaki kırmızı kartlar için: benzer yeşil oyunlar yetmezse listeyi genel önerilerle tamamlar.
+    Genel öneri: yaşa uygun (en fazla Genç), korku olmayan, Play puanı >= 4.0 yeşil oyun; önce aynı tür, sonra ücretsiz,
+    sonra yüksek puan. Kart sayfasındaki ve raporlardaki benzerlik listesi değişmez."""
+    sonuc = [{**a, "genel": False} for a in (mevcut or [])][:adet]
+    if len(sonuc) >= adet or not tablo or not tablo.get("oyunlar"):
+        return sonuc
+    sinir = min(YAS_SIRASI.get(yas, 0), YAS_SIRASI["Teen"])
+    alinan = {a["play_id"] for a in sonuc} | {haric}
+    aday = [a for a in tablo["oyunlar"] if a["play_id"] not in alinan and YAS_SIRASI.get(a["yas"], 9) <= sinir
+            and a["puan"] >= 4.0 and not a["korku"]]
+    aday.sort(key=lambda a: (a["tur"] != tur, not a["ucretsiz"], -round(a["puan"], 1), -_indirme(a["indirme"]), a["ad"]))
+    for a in aday[:adet - len(sonuc)]:
+        sonuc.append({"ad": a["ad"], "play_id": a["play_id"], "puan": round(a["puan"], 1), "ucretsiz": a["ucretsiz"],
+                      "yas_tr": YAS_TR.get(a["yas"], a["yas"]), "benzerlik": None, "genel": True})
+    return sonuc
+
+
 def ekle(kart, magaza, aciklama, tablo):
     """Kart sözlüğüne aile alanlarını ekler (yerinde)."""
     m = magaza or {}
