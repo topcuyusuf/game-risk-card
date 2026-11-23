@@ -50,6 +50,12 @@ Samsung Innovation Campus (AI) capstone, in cooperation with Yeşilay. Author: Y
   Compared with the same player's other games, players spend ×0.85 the time on green-card games,
   ×1.25 on yellow and ×1.78 on red – about 2× more on red than green (95% interval 1.4–3.1;
   `src/35_gercek_sure.py`, `36_open_play_play`, `37_genis_sure_testi`, `38_beklenen_sure`).
+- **Colour stability** (`src/45_kararlilik.py`): two disjoint 200-review samples of the same game give
+  the same colour for about 9 in 10 games. Each card is re-scored on 15 bootstrap resamples of its reviews;
+  if fewer than 90% agree, it shows a "colour is borderline" note. On 473 games with 400 reviews (5-fold),
+  marked cards (26%) kept their colour on a disjoint sample in 75% of cases, unmarked ones in 97%.
+- Extra Wait To Play / Grinding phrases ("bonus lives", "stuck on the same level") were tried and not used
+  (`src/46_kural_genisletme.py`): card-score AUC 0.861 → 0.861 (dev), 0.856 → 0.855 (test).
 - A per-game "expected screen time" number was tried and not used: its typical error (×1.76) was
   no better than the colour's, so the card keeps a colour-level time sentence.
 - **Turkish reviews** (`39`–`42`): a model trained on ~200 Turkish Play reviews per game reaches
@@ -63,8 +69,12 @@ Each card also has a "For families" box (`src/aile.py`); it never changes the co
   addresses children ("perfect for kids", "for toddlers", "ages 4+"; negated phrases ignored).
 - A short, practical tip for every detected trap (e.g. ads: prefer the ad-free version or play
   offline in airplane mode; loot boxes: lock in-app purchases and set a spending limit).
-- For yellow/red games: up to three green-card games of the same Play genre with an age rating no
-  stricter than the original (rated ≥ 4.0, most installed first).
+- For yellow/red games: up to three green-card games whose store description is most similar
+  (TF-IDF cosine; same Play genre ≥ 0.04 with a small bonus, other genres ≥ 0.12), with an age rating
+  no stricter than the original and a Play rating ≥ 4.0. Horror games (description words or the Play
+  "Horror" tag) are only suggested for horror games. If nothing is similar enough, no alternative is
+  shown (259 of 367 yellow/red cards get one). Genre-only matching had suggested a horror game for
+  Clash of Clans; now it suggests Kingdom Rush Frontiers and Bloons TD.
 - Adding the 347 iOS games to training changed Play AUC by only +0.003 on average
   (`src/27_ios_ekleme_kontrolu.py`), so the system was kept as is and the test set stays clean.
 
@@ -81,7 +91,7 @@ Each card also has a "For families" box (`src/aile.py`); it never changes the co
 | Store signals | `21_magaza_sinyalleri`, `22_sinyal_karsilastir` |
 | Independent test | `23_bagimsiz_test`, `25_ogrenilen_olasilik`, `26_lootbox_dogrulama`, `27_ios_ekleme_kontrolu` |
 | Live demo | `24_demo` |
-| Later checks | `28`–`32` (sentence pilot, Can't Pause rule, review count), `34`–`38` (Open Play: problem gaming, real playtime), `39`–`42` (Turkish reviews) |
+| Later checks | `28`–`32` (sentence pilot, Can't Pause rule, review count), `34`–`38` (Open Play: problem gaming, real playtime), `39`–`42` (Turkish reviews), `45`–`46` (colour stability, rule extension) |
 | For families | `aile` (age rating, child note, parent tips, green alternatives) |
 
 Code comments and console output are in Turkish.

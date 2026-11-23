@@ -3,14 +3,20 @@
 1) Çocuk bilgisi: Google Play yaş derecesi + mağaza açıklamasında açıkça çocuklara seslenen ifade
    ("perfect for kids", "for toddlers", "ages 4+"). Olumsuz cümleler ("not suitable for kids") sayılmaz.
 2) Ebeveyn ipuçları: kartta bulunan her tuzak için kısa, uygulanabilir bir öneri.
-3) Yeşil alternatifler: aynı Google Play türünde (ör. GAME_PUZZLE), yaş derecesi daha sıkı olmayan,
-   kartı YEŞİL olan (model de kırmızı demeyen) oyunlar; Play puanı ve indirme sayısına göre sıralı.
+3) Yeşil alternatifler: kartı YEŞİL olan (model de kırmızı demeyen), yaş derecesi daha sıkı olmayan, Play puanı
+   >= 4.0 oyunlar; mağaza açıklamasına en BENZER olanlar önce (TF-IDF kosinüs benzerliği, aynı Play türüne küçük
+   bonus). Benzerlik eşiği: aynı türde >= 0.04, farklı türde >= 0.12; eşiği geçen yoksa alternatif gösterilmez
+   (yalnız türe göre seçim Clash of Clans'a korku oyunu öneriyordu). Orijinal oyun korku değilse korku oyunları elenir.
 Kullanım (kontrol):  python src/aile.py
 """
 
 import json
+import math
 import re
 import sys
+from collections import Counter
+
+from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
 
 from ortak import HEDEF_TUZAKLAR, VERI
 
@@ -53,6 +59,42 @@ IPUCU = {
 }
 AD_ID = {v: k for k, v in HEDEF_TUZAKLAR.items()}
 
+KORKU = re.compile(r"\b(?:horror|scary|creepy|terrifying|jump ?scares?|haunted|gore|gory|nightmares?)\b", re.I)
+ESIK_AYNI, ESIK_FARKLI, TUR_BONUS = 0.04, 0.12, 0.05
+VEKTOR_UZUNLUK = None        # kısaltma benzerliği düşürüyordu (80 terimde kapsam 259 -> 219); tam vektör saklanır
+
+
+def _kelimeler(metin):
+    return [w for w in re.findall(r"[a-z]{3,}", str(metin).lower()) if w not in ENGLISH_STOP_WORDS]
+
+
+def idf_hesapla(aciklamalar):
+    """Tüm açıklamalardan IDF. Çok yaygın (> %15) ve tek oyunda geçen kelimeler atılır ('game', 'play', 'free' …)."""
+    df = Counter()
+    for a in aciklamalar:
+        df.update(set(_kelimeler(a)))
+    n = len(aciklamalar)
+    return {w: math.log(n / d) + 1 for w, d in df.items() if 2 <= d <= 0.15 * n}
+
+
+def vektor(metin, idf, uzunluk=None):
+    """Birim uzunlukta TF-IDF vektörü {kelime: ağırlık}."""
+    v = {w: (1 + math.log(c)) * idf[w] for w, c in Counter(_kelimeler(metin)).items() if w in idf}
+    z = math.sqrt(sum(x * x for x in v.values())) or 1.0
+    v = {w: x / z for w, x in v.items()}
+    if uzunluk:
+        v = dict(sorted(v.items(), key=lambda kv: -kv[1])[:uzunluk])
+    return v
+
+
+def korku_mu(aciklama, kategoriler=()):
+    """Açıklamada korku kelimesi ya da Play etiketi 'Horror' / 'Survival horror'."""
+    return bool(KORKU.search(aciklama or "")) or any("horror" in str(k).lower() for k in kategoriler or ())
+
+
+def benzerlik(a, b):
+    return sum(x * b.get(w, 0.0) for w, x in a.items())
+
 
 def cocuk_bilgisi(yas, aciklama):
     """{'yas': ..., 'yas_tr': ..., 'her_yas': bool, 'hedef': bool, 'alinti': str|None}"""
@@ -73,8 +115,11 @@ def ipuclari(kart):
     return [{"tuzak": HEDEF_TUZAKLAR[t], "ipucu": IPUCU[t]} for t in dict.fromkeys(ids)]
 
 
-def alternatif_tablosu(kartlar, play_bilgi):
-    """Yeşil kartlı oyunlar: tür, yaş derecesi, Play puanı, indirme. kartlar: kart listesi; play_bilgi: oyun_id -> kayıt"""
+def alternatif_tablosu(kartlar, play_bilgi, aciklamalar, kategoriler=None):
+    """Yeşil kartlı oyunlar + IDF. kartlar: kart listesi; play_bilgi: oyun_id -> kayıt; aciklamalar: oyun_id -> metin;
+    kategoriler: oyun_id -> Play etiketleri (korku filtresi için).
+    Dönüş: {'idf': {...}, 'oyunlar': [...]}."""
+    idf = idf_hesapla(list(aciklamalar.values()))
     tablo = []
     for k in kartlar:
         p = play_bilgi.get(k["oyun_id"])
@@ -83,24 +128,34 @@ def alternatif_tablosu(kartlar, play_bilgi):
         tablo.append({"oyun_id": k["oyun_id"], "ad": p.get("title") or k["ad"], "play_id": p["play_id"],
                       "tur": p["genreId"], "tur_ad": p.get("genre"), "yas": p.get("contentRating"),
                       "puan": p.get("score") or 0, "indirme": p.get("installs") or "",
-                      "ucretsiz": bool(p.get("free"))})
-    return tablo
+                      "ucretsiz": bool(p.get("free")),
+                      "korku": korku_mu(aciklamalar.get(k["oyun_id"], ""), (kategoriler or {}).get(k["oyun_id"])),
+                      "vektor": {w: round(x, 4) for w, x in
+                                 vektor(aciklamalar.get(k["oyun_id"], ""), idf, VEKTOR_UZUNLUK).items()}})
+    return {"idf": {w: round(x, 4) for w, x in idf.items()}, "oyunlar": tablo}
 
 
 def _indirme(s):
     return int(re.sub(r"\D", "", str(s)) or 0)
 
 
-def alternatifler(tablo, tur, yas, haric=None, adet=3):
-    """Aynı türde, yaş derecesi daha sıkı olmayan yeşil oyunlar (en çok `adet`)."""
-    if not tablo or not tur:
+def alternatifler(tablo, tur, yas, haric=None, aciklama="", kategoriler=(), adet=3):
+    """Açıklaması en benzer, yaş derecesi daha sıkı olmayan yeşil oyunlar (en çok `adet`; eşiği geçen yoksa boş)."""
+    if not tablo or not tablo.get("oyunlar") or not aciklama:
         return []
-    sinir = YAS_SIRASI.get(yas, 9)
-    aday = [a for a in tablo if a["tur"] == tur and a["play_id"] != haric and YAS_SIRASI.get(a["yas"], 9) <= sinir
-            and a["puan"] >= 4.0]
-    aday.sort(key=lambda a: (-_indirme(a["indirme"]), -a["puan"]))
+    q = vektor(aciklama, tablo["idf"])
+    korku = korku_mu(aciklama, kategoriler)
+    sinir = YAS_SIRASI.get(yas, 0)          # yaş derecesi bilinmiyorsa en sıkısı (Herkes) varsayılır
+    aday = []
+    for a in tablo["oyunlar"]:
+        if a["play_id"] == haric or YAS_SIRASI.get(a["yas"], 9) > sinir or a["puan"] < 4.0 or (a["korku"] and not korku):
+            continue
+        b, ayni = benzerlik(q, a["vektor"]), a["tur"] == tur
+        if b >= (ESIK_AYNI if ayni else ESIK_FARKLI):
+            aday.append((b + TUR_BONUS * ayni, _indirme(a["indirme"]), b, a))
+    aday.sort(key=lambda x: (-x[0], -x[1]))
     return [{"ad": a["ad"], "play_id": a["play_id"], "puan": round(a["puan"], 1), "ucretsiz": a["ucretsiz"],
-             "yas_tr": YAS_TR.get(a["yas"], a["yas"])} for a in aday[:adet]]
+             "yas_tr": YAS_TR.get(a["yas"], a["yas"]), "benzerlik": round(b, 2)} for _, _, b, a in aday[:adet]]
 
 
 def ekle(kart, magaza, aciklama, tablo):
@@ -108,13 +163,14 @@ def ekle(kart, magaza, aciklama, tablo):
     m = magaza or {}
     kart["cocuk"] = cocuk_bilgisi(m.get("play_yas"), aciklama)
     kart["ipuclari"] = ipuclari(kart)
-    kart["alternatifler"] = (alternatifler(tablo, m.get("play_tur"), m.get("play_yas"), m.get("play_id"))
+    kart["alternatifler"] = (alternatifler(tablo, m.get("play_tur"), m.get("play_yas"), m.get("play_id"), aciklama,
+                                           m.get("play_kategoriler"))
                              if kart["renk"] != "yesil" else [])
     return kart
 
 
 def alternatif_oku():
-    return json.load(open(ALTERNATIF_DOSYA, encoding="utf-8")) if ALTERNATIF_DOSYA.exists() else []
+    return json.load(open(ALTERNATIF_DOSYA, encoding="utf-8")) if ALTERNATIF_DOSYA.exists() else {}
 
 
 if __name__ == "__main__":

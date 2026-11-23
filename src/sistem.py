@@ -7,6 +7,8 @@ böylece her yerde birebir aynı kural çalışır.
 """
 
 import importlib
+import random
+from collections import Counter
 
 import joblib
 import pandas as pd
@@ -20,6 +22,8 @@ kart_mod = importlib.import_module("16_kart")
 import aile
 
 ONBELLEK = VERI / "model" / "sistem.joblib"
+KARARLILIK_TEKRAR = 15      # yeniden örnekleme sayısı (tekrar başına ~0.25 sn)
+KARARLILIK_ESIK = kart_mod.KARARLILIK_ESIK   # 0.90; 45. adımda seçildi
 
 
 def sistemi_egit():
@@ -51,6 +55,25 @@ def sistemi_yukle(yeniden=False):
     return sistem
 
 
+def renk_hesapla(modeller, karne, oyun_id, yorumlar, aciklama="", magaza=None):
+    """Yalnızca renk ve puan (kanıt metni, aile kutusu yok); yeniden örnekleme için hafif yol."""
+    s = {ad_: float(m.predict_proba([" ".join(y["metin"] for y in yorumlar)])[0, 1]) for ad_, m in modeller.items()}
+    s["renk"] = risk.renk(s["genel_olas"])
+    k = kart_mod.kart_kur(oyun_id, "", s, kanitlar.oyun_kanitlari(yorumlar, aciklama), karne, magaza)
+    return k["renk"], k["puan"]
+
+
+def kararlilik(modeller, karne, oyun_id, yorumlar, renk, aciklama="", magaza=None, tekrar=KARARLILIK_TEKRAR, tohum=0):
+    """Yorumlar yerine koyarak yeniden örneklenir (bootstrap); her örnekte renk yeniden hesaplanır.
+    Dönüş: {'oran': aynı renk payı, 'diger': en sık farklı renk ya da None, 'sinirda': oran < eşik}"""
+    r = random.Random(tohum)
+    renkler = Counter(renk_hesapla(modeller, karne, oyun_id, r.choices(yorumlar, k=len(yorumlar)), aciklama, magaza)[0]
+                      for _ in range(tekrar))
+    oran = renkler[renk] / tekrar
+    diger = max((c for c in renkler if c != renk), key=lambda c: renkler[c], default=None)
+    return {"oran": round(oran, 2), "diger": diger, "sinirda": oran < KARARLILIK_ESIK}
+
+
 def kart_uret(sistem, oyun_id, ad, yorumlar, aciklama="", magaza=None):
     """yorumlar: [{'metin', 'yildiz', 'faydali_oy'}, ...]. Tek oyunun kartını döndürür."""
     yorumlar = [y for y in yorumlar if y.get("metin")]
@@ -63,5 +86,6 @@ def kart_uret(sistem, oyun_id, ad, yorumlar, aciklama="", magaza=None):
     k["sure_aciklama"] = kart_mod.sure_cumlesi(k["renk"], sistem.get("sure_olcegi"))
     k["genel_olas"] = round(s["genel_olas"], 2)
     k["yorum_sayisi"] = len(yorumlar)
-    aile.ekle(k, magaza, aciklama, sistem.get("alternatifler", []))   # çocuk bilgisi, ipuçları, alternatifler
+    k["kararlilik"] = kararlilik(sistem["modeller"], sistem["karne"], oyun_id, yorumlar, k["renk"], aciklama, magaza)
+    aile.ekle(k, magaza, aciklama, sistem.get("alternatifler", {}))   # çocuk bilgisi, ipuçları, alternatifler
     return k

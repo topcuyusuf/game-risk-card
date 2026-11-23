@@ -26,6 +26,7 @@ UYARI_ESIK = 0.5
 AKRAN_YUZDELIK = 0.90      # Akran eşiği: tuzaksız oyunların %90'ının konuşma oranı
 MIN_KAT = 1.5              # 'Tespit' için akran eşiğinin en az 1.5 katı konuşulmalı
 KURAL_AUC = 0.70           # Kural bu AUC'yi geçerse kartta gösterilir.
+KARARLILIK_ESIK = 0.90     # Yeniden örneklemede renk bu paydan azında aynıysa 'renk sınırda' notu (45. adım)
 # Not: 'karanlık içi AUC' ile de girme yolu denendi; Infinite Treadmill bu yolla girdi ama
 # tespitleri genel orandan iyi değildi (%54'e karşı %57). Bu yüzden sadece genel AUC kullanılıyor.
 MODEL_TUZAKLARI = {28}     # Bu tuzakta kural yerine model kullanılır (kural zayıf, model iyi).
@@ -228,11 +229,13 @@ def main():
         p = json.loads(satir)
         if p.get("durum") == "yayinda":
             play[p["oyun_id"]] = p
-    alt_tablo = aile.alternatif_tablosu(kartlar, play)
+    kategori = {o: (m or {}).get("play_kategoriler") for o, m in magaza.items()}
+    alt_tablo = aile.alternatif_tablosu(kartlar, play, tablo["aciklama"].to_dict(), kategori)
     json.dump(alt_tablo, open(aile.ALTERNATIF_DOSYA, "w", encoding="utf-8"), ensure_ascii=False)
     for kart in kartlar:
         p = play.get(kart["oyun_id"], {})
-        aile.ekle(kart, {"play_yas": p.get("contentRating"), "play_tur": p.get("genreId"), "play_id": p.get("play_id")},
+        aile.ekle(kart, {"play_yas": p.get("contentRating"), "play_tur": p.get("genreId"), "play_id": p.get("play_id"),
+                         "play_kategoriler": kategori.get(kart["oyun_id"])},
                   tablo.loc[kart["oyun_id"], "aciklama"], alt_tablo)
 
     # Renk ölçeği: her KURAL renginin geçmişte gerçekleşen 'karanlık' oranı (kartın ilk cümlesi).
@@ -240,8 +243,15 @@ def main():
     renk_olcegi = skor["genel_gercek"].groupby(kural_renk).mean()
     renk_olcegi.to_json(VERI / "renk_olcegi.json")            # Yeni oyunların kartı için saklanır
     sure_olcegi = sure_olcegi_oku()
+    # "Renk sınırda" notu (45. adımda katlı modellerle hesaplanır; dosya yoksa not yok)
+    kararlilik = (json.load(open(VERI / "kararlilik.json", encoding="utf-8"))
+                  if (VERI / "kararlilik.json").exists() else {})
     with open(CIKTI, "w", encoding="utf-8") as f:
         for kart in kartlar:
+            if kart["oyun_id"] in kararlilik:
+                kr = kararlilik[kart["oyun_id"]]
+                kart["kararlilik"] = {"oran": kr["oran"], "diger": kr["diger"],
+                                      "sinirda": kr["oran"] < KARARLILIK_ESIK}
             kart["renk_aciklama"] = renk_cumlesi(kart["renk"], renk_olcegi)
             kart["sure_aciklama"] = sure_cumlesi(kart["renk"], sure_olcegi)
             f.write(json.dumps(kart, ensure_ascii=False) + "\n")

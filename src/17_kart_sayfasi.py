@@ -145,6 +145,12 @@ function kartCiz(k) {
     puan.append(document.createTextNode(" — " + k.puan_dokumu.map(p => `${p.tuzak} (${p.agirlik})`).join(" + ")));
   }
   kart.append(puan, el("p", "oran", k.renk_aciklama));
+  const kr = k.kararlilik;
+  if (kr && kr.sinirda) {
+    const ad = {yesil: "yeşil", sari: "sarı", kirmizi: "kırmızı"}[kr.diger] || "başka bir renk";
+    kart.append(el("p", "not", `↔ Renk sınırda: yorumların farklı bir örneğiyle kart ${ad} çıkabilir ` +
+                                `(yorumlar yeniden örneklendiğinde aynı renk %${Math.round(100 * kr.oran)}).`));
+  }
   if (k.sure_aciklama) kart.append(el("p", "oran", "⏱ " + k.sure_aciklama));
   if (k.ikinci_gorus) kart.append(el("p", "not", "ⓘ " + k.ikinci_gorus));
 
@@ -188,7 +194,7 @@ function kartCiz(k) {
   return kart;
 }
 
-// Aileler için: çocuk bilgisi, tuzak başına ipucu, aynı türde yeşil alternatifler (rengi değiştirmez)
+// Aileler için: çocuk bilgisi, tuzak başına ipucu, açıklaması benzer yeşil alternatifler (rengi değiştirmez)
 function aileKutusu(k) {
   const c = k.cocuk || {}, ip = k.ipuclari || [], alt = k.alternatifler || [];
   if (!c.yas && !c.hedef && !ip.length && !alt.length) return null;
@@ -205,8 +211,11 @@ function aileKutusu(k) {
     ip.forEach(i => { const li = el("li"); li.append(el("strong", "", i.tuzak + ": "), document.createTextNode(i.ipucu)); ul.append(li); });
     kutu.append(ul);
   }
+  if (!alt.length && k.renk !== "yesil" && c.yas) {
+    kutu.append(el("p", "soluk", "Bu oyuna yeterince benzeyen yeşil kartlı bir oyun bulamadık."));
+  }
   if (alt.length) {
-    kutu.append(el("b", "", "Aynı türde yeşil kartlı oyunlar"));
+    kutu.append(el("b", "", "Benzer yeşil kartlı oyunlar"));
     const ul = el("ul");
     alt.forEach(a => {
       const li = el("li");
@@ -263,7 +272,7 @@ def main():
     # Sayfada sadece gerekli alanlar: oyun_id ve iç puanlar dışarıda kalır.
     sade = [{
         "ad": k["ad"], "renk": k["renk"], "renk_aciklama": k["renk_aciklama"],
-        "sure_aciklama": k.get("sure_aciklama"),
+        "sure_aciklama": k.get("sure_aciklama"), "kararlilik": k.get("kararlilik"),
         "puan": k["puan"], "puan_en_fazla": k["puan_en_fazla"], "puan_dokumu": k["puan_dokumu"],
         "ikinci_gorus": k["ikinci_gorus"], "oysuz": k.get("oysuz", False),
         "reklamsiz": k.get("reklamsiz", False),
