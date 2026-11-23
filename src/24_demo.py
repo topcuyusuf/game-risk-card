@@ -62,6 +62,7 @@ def kaydet(paket, sonuc, sure):
 
 # Arayüz ayrı dosyada: koleksiyon kartı görünümü, kapatma/geri alma, en çok 12 açık kart.
 SAYFA = Path(__file__).with_name("arayuz.html").read_text(encoding="utf-8")
+GORSELLER = {f"/{ad}": Path(__file__).with_name(ad).read_bytes() for ad in ("logo.webp", "meme.webp")}
 IKON = re.compile(r"^https://play-lh\.googleusercontent\.com/[\w\-./=]+$")   # yalnızca Google Play görselleri
 
 
@@ -155,7 +156,9 @@ def kart_hazirla(q):
 class Istek(BaseHTTPRequestHandler):
     def _yaz(self, kod, tur, govde):
         self.send_response(kod)
-        self.send_header("Content-Type", tur + "; charset=utf-8")
+        self.send_header("Content-Type", tur if tur.startswith("image/") else tur + "; charset=utf-8")
+        if tur.startswith("image/"):
+            self.send_header("Cache-Control", "public, max-age=86400")
         self.send_header("Content-Length", str(len(govde)))
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Content-Security-Policy",
@@ -183,6 +186,8 @@ class Istek(BaseHTTPRequestHandler):
         u = urlparse(self.path)
         if u.path == "/":
             self._yaz(200, "text/html", SAYFA.encode("utf-8"))
+        elif u.path in GORSELLER:
+            self._yaz(200, "image/webp", GORSELLER[u.path])
         elif u.path == "/api/kart":
             q = parse_qs(u.query).get("q", [""])[0][:300]
             basla = time.time()

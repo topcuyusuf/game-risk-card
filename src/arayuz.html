@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Oyun Risk Kartı</title>
+<link rel="icon" type="image/webp" href="/logo.webp">
 <style>
 :root {
   color-scheme: light;
@@ -227,21 +228,39 @@ form button:disabled { opacity: .6; cursor: wait; }
   .pb { display: flex; }
   .pg { overflow: visible; padding-right: 20px; }
 }
+header { position: relative; padding: 24px 0 18px; text-align: center; }
+.logo { display: block; width: min(440px, 100%); height: auto; margin: 0 auto 14px; box-shadow: var(--golge); }
+h1 { font-size: clamp(31px, 5vw, 44px); line-height: 1.08; font-weight: 800; letter-spacing: -.02em; }
+header .tema { position: absolute; top: 14px; right: 0; z-index: 2; margin: 0; }
+.alt { margin: 10px auto 18px; max-width: 610px; }
+form { width: 100%; max-width: 680px; margin: 0 auto; }
+.oneri { justify-content: center; }
+.durum { text-align: center; }
+@media (max-width: 620px) { header { padding-top: 62px; } header .tema { top: 8px; } .alt { margin-bottom: 14px; }
+  form { flex-direction: column; } form input { flex: none; width: 100%; } form button { width: 100%; } }
+#btn { display: inline-flex; align-items: center; justify-content: center; gap: 9px; height: 50px; padding: 0 22px 2px 17px; border: 0; border-radius: 11px;
+  color: #fff; font-size: 17px; font-weight: 900; letter-spacing: .055em; white-space: nowrap; text-shadow: 0 1px 1px rgba(10, 60, 22, .65);
+  background: linear-gradient(#3f9f4c, #2b8439); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .34), inset 0 0 0 1px rgba(255, 255, 255, .08), 0 4px 0 #1e6229, 0 7px 12px rgba(20, 60, 28, .28);
+  transition: transform .08s, box-shadow .08s, filter .12s; }
+#btn .oynat { flex: none; width: 23px; height: 23px; fill: #fff; filter: drop-shadow(0 1px 1px rgba(10, 60, 22, .55)); }
+#btn:hover:not(:disabled) { filter: brightness(1.07); }
+#btn:active:not(:disabled) { transform: translateY(3px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .28), 0 1px 0 #1e6229, 0 2px 5px rgba(20, 60, 28, .28); }
+#btn:disabled { opacity: .68; cursor: wait; }
+.tuzak-ad { min-width: 0; }
+.tuzak-ad small { display: block; color: var(--soluk); font-size: 12px; font-weight: 400; line-height: 1.25; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 </style>
 </head>
 <body>
 <div class="sayfa">
   <header>
-    <div class="ust">
-      <span class="marka" aria-hidden="true"><i></i><i></i><i></i></span>
-      <h1>Oyun Risk Kartı</h1>
-      <button class="tema" id="tema" type="button" aria-label="Açık ya da koyu temaya geç">☾</button>
-    </div>
+    <button class="tema" id="tema" type="button" aria-label="Açık ya da koyu temaya geç">☾</button>
+    <img class="logo" src="/meme.webp?v=2" width="1024" height="1024" alt="Dört karelik karikatür: Bir kişi sineklerin, farelerin ve ayıların tuzağa düşmesine şaşırıyor; son karede kendisi telefonunda kırmızı kartlı bir oyuna takılmış durumda.">
+    <h1>Oyun Risk Kartı</h1>
     <p class="alt">Bir oyunun ekran süresini artıran tasarım tuzaklarını oyuncu yorumlarından okur; yeşil, sarı ya da kırmızı kart verir.</p>
     <form id="form">
       <input id="q" maxlength="300" placeholder="Oyun adı ya da Google Play bağlantısı" aria-label="Oyun adı ya da Google Play bağlantısı" autocomplete="off">
-      <button id="btn">Kartı üret</button>
+      <button id="btn" aria-label="Kartı üret"><svg class="oynat" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 4.3v15.4a1.3 1.3 0 0 0 2 1.1l11.8-7.7a1.3 1.3 0 0 0 0-2.2L8.5 3.2a1.3 1.3 0 0 0-2 1.1z"/></svg><span>KARTI ÜRET</span></button>
     </form>
     <div class="oneri" id="oneri"></div>
     <p class="durum" id="durum" role="status"></p>
@@ -265,6 +284,16 @@ const ORNEKLER = [["8 Ball Pool", "com.miniclip.eightballpool"], ["Monument Vall
                   ["Candy Crush Saga", "com.king.candycrushsaga"]];
 const RENK = { yesil: ["YEŞİL", "✓"], sari: ["SARI", "!"], kirmizi: ["KIRMIZI", "▲"] };
 const RENK_AD = { yesil: "yeşil", sari: "sarı", kirmizi: "kırmızı" };
+const TUZAK_TR = {
+  "Playing by Appointment": "Belirli Saatte Oynatma", "Daily Rewards": "Günlük Ödüller", "Grinding": "Sürekli Kasma",
+  "Advertisements": "Reklamlar", "Infinite Treadmill": "Bitmeyen Oyun Döngüsü", "Can't Pause or Save": "Durdurma/Kaydetme Yok",
+  "Wait To Play": "Oynamak İçin Bekleme", "Fear of Missing Out": "Kaçırma Korkusu",
+  "Social Obligation / Guilds": "Sosyal Zorunluluk / Lonca", "Competition": "Rekabet", "Variable Rewards": "Değişken Ödüller",
+  "Invested / Endowed Value": "Yatırılan Emek ve Değer", "Badges / Endowed Progress": "Rozetler / Hazır İlerleme",
+  "Complete the Collection": "Koleksiyonu Tamamlama"
+};
+const trAd = ad => TUZAK_TR[ad] || ad;
+const trMetin = m => Object.keys(TUZAK_TR).reduce((y, ad) => y.split(ad).join(TUZAK_TR[ad]), String(m));
 const PAKET = /^[A-Za-z]\w*(\.[A-Za-z_]\w*)+$/;
 const $ = id => document.getElementById(id);
 let kartlar = depodanOku(), filtre = "hepsi", yukleniyor = null, vurgulanan = null, onceki = null, geriNotu = "", toastSaat = 0;
@@ -355,7 +384,7 @@ function oyunKarti(k) {
   const hepsi = tuzaklar(k), alan = sinirda(k) ? 2 : 3, goster = hepsi.length > alan ? alan - 1 : alan;
   hepsi.slice(0, goster).forEach(t => {
     const r = el("div", "s");
-    r.append(el("span", "", t.ad));
+    r.append(el("span", "", trAd(t.ad)));
     if (t.agirlik) r.append(el("span", "", `+${t.agirlik}`));
     sat.append(r);
   });
@@ -523,7 +552,9 @@ function paneliAc(k) {
   liste.forEach((t, sira) => {
     const d = el("details", "tr"); if (sira === 0) d.open = true;
     const su = el("summary");
-    su.append(el("span", "", t.ad), el("span", "ag", t.agirlik ? `+${t.agirlik} puan` : "puana etkisi yok"));
+    const adlar = el("span", "tuzak-ad", trAd(t.ad));
+    if (TUZAK_TR[t.ad]) adlar.append(el("small", "", t.ad));
+    su.append(adlar, el("span", "ag", t.agirlik ? `+${t.agirlik} puan` : "puana etkisi yok"));
     const ic = el("div", "ic");
     if (t.tespit) {
       const v = t.tespit;
@@ -547,7 +578,7 @@ function paneliAc(k) {
 
   const s3 = bolum("Ekran süresi");
   if (k.sure_aciklama) s3.append(el("p", "", k.sure_aciklama));
-  (k.ekran_suresi_uyarisi || []).forEach(n => s3.append(el("p", "not", String(n).replace(/(\d)\.(\d)/g, "$1,$2"))));
+  (k.ekran_suresi_uyarisi || []).forEach(n => s3.append(el("p", "not", trMetin(n).replace(/(\d)\.(\d)/g, "$1,$2"))));
   if (s3.childNodes.length > 1) g.append(s3);
 
   const c = k.cocuk || {}, ip = k.ipuclari || [], alts = k.alternatifler || [];
@@ -562,7 +593,7 @@ function paneliAc(k) {
     }
     if (ip.length) {
       const u = el("ul", "ipucu");
-      ip.forEach(i => { const li = el("li"); li.append(el("b", "", i.tuzak + ": "), document.createTextNode(i.ipucu)); u.append(li); });
+      ip.forEach(i => { const li = el("li"); li.append(el("b", "", trAd(i.tuzak) + ": "), document.createTextNode(i.ipucu)); u.append(li); });
       s4.append(u);
     }
     if (alts.length) {
@@ -593,7 +624,7 @@ function paneliAc(k) {
 
   const s5 = el("section", "bolum"), nd = el("details", "nasil");
   nd.append(el("summary", "", "Nasıl hesaplandı?"),
-    el("p", "", "Tespit edilen her tuzak ağırlığı kadar puan ekler: Variable Rewards 3; Advertisements, Wait To Play, Grinding 2; diğerleri 1. 0–1 puan yeşil, 2–4 sarı, 5 ve üstü kırmızı. Puan sarıya düştüğü hâlde yorumların genel tonuna bakan model oyunu kırmızı görüyorsa kart kırmızı olur."));
+    el("p", "", "Tespit edilen her tuzak ağırlığı kadar puan ekler: Değişken Ödüller 3; Reklamlar, Oynamak İçin Bekleme, Sürekli Kasma 2; diğerleri 1. 0–1 puan yeşil, 2–4 sarı, 5 ve üstü kırmızı. Puan sarıya düştüğü hâlde yorumların genel tonuna bakan model oyunu kırmızı görüyorsa kart kırmızı olur."));
   s5.append(nd); g.append(s5);
 
   const govde = el("div", "panel-govde"), sol = el("div", "panel-kart"), kk = el("div", "kutu");
