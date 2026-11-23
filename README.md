@@ -79,9 +79,14 @@ Each card also has a "For families" box (`src/aile.py`); it never changes the co
 - For yellow/red games: up to three green-card games whose store description is most similar
   (TF-IDF cosine; same Play genre ≥ 0.04 with a small bonus, other genres ≥ 0.12), with an age rating
   no stricter than the original and a Play rating ≥ 4.0. Horror games (description words or the Play
-  "Horror" tag) are only suggested for horror games. If nothing is similar enough, no alternative is
-  shown (259 of 367 yellow/red cards get one). Genre-only matching had suggested a horror game for
+  "Horror" tag) are only suggested for horror games. If nothing is similar enough, the card page shows
+  no alternative (259 of 367 yellow/red cards get one). Genre-only matching had suggested a horror game for
   Clash of Clans; now it suggests Kingdom Rush Frontiers and Bloons TD.
+- In the live demo, red cards always show three green suggestions. If too few games are similar, the list is
+  completed with labelled "general suggestions" (green card, age rating no stricter than the game and at most
+  Teen, Play rating ≥ 4.0, no horror, same genre first); these may not resemble the original game. On the 233 red
+  development cards, 362 of the 699 suggestions are general. The list of green games stays out of this repository
+  because it is derived from the vote data, so without it the demo shows a letter instead of the game icon.
 - Adding the 347 iOS games to training changed Play AUC by only +0.003 on average
   (`src/27_ios_ekleme_kontrolu.py`), so the system was kept as is and the test set stays clean.
 
