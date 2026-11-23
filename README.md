@@ -94,7 +94,7 @@ Each card also has a "For families" box (`src/aile.py`); it never changes the co
 | Report figures | `20_rapor_grafikleri` (output in `cikti/grafikler/`) |
 | Store signals | `21_magaza_sinyalleri`, `22_sinyal_karsilastir` |
 | Independent test | `23_bagimsiz_test`, `25_ogrenilen_olasilik`, `26_lootbox_dogrulama`, `27_ios_ekleme_kontrolu` |
-| Live demo | `24_demo` |
+| Live demo | `24_demo`, `arayuz.html` (collectible-style card interface) |
 | Later checks | `28`–`32` (sentence pilot, Can't Pause rule, review count), `34`–`38` (Open Play: problem gaming, real playtime), `39`–`42` (Turkish reviews), `45`–`47` (colour stability, rule extension, ad-product fix) |
 | For families | `aile` (age rating, child note, parent tips, green alternatives) |
 

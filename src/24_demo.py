@@ -16,6 +16,7 @@ import unicodedata
 import time
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 import requests
@@ -26,7 +27,6 @@ import sistem as sistem_mod
 from ortak import VERI
 
 veri_seti = importlib.import_module("09_veri_seti")
-sayfa_mod = importlib.import_module("17_kart_sayfasi")   # aynı görünüm için CSS + kart çizimi
 
 # Yerelde: 127.0.0.1:8765. Yayında (ör. Hugging Face Spaces): HOST=0.0.0.0 PORT=7860 ortam değişkenleri.
 HOST = os.environ.get("HOST", "127.0.0.1")
@@ -60,63 +60,9 @@ def kaydet(paket, sonuc, sure):
                           sonuc.get("yorum_sayisi", ""), sonuc.get("puan", ""), sonuc.get("renk", ""),
                           sonuc.get("model_renk", ""), sonuc.get("genel_olas", ""), round(sure, 1), hata or ""])
 
-# Kart sayfasındaki stil ve çizim kodunu aynen kullan (iki yerde ayrı kod olmasın)
-_s = sayfa_mod.SABLON
-CSS = _s[_s.index("<style>") + 7:_s.index("</style>")]
-KART_JS = _s[_s.index("function el("):_s.index("function ciz()")]
-
-SAYFA = """<!doctype html><html lang="tr"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Oyun Risk Kartı – Demo</title><style>__CSS__
-.form { display: flex; gap: 8px; flex-wrap: wrap; }
-.form input { flex: 1 1 320px; padding: 12px; font-size: 15px; border-radius: 8px;
-  border: 1px solid var(--cizgi); background: var(--kart); color: var(--metin); }
-.form button { padding: 12px 20px; font-size: 15px; font-weight: 600; border-radius: 8px; cursor: pointer;
-  border: 1px solid var(--metin); background: var(--metin); color: var(--zemin); }
-.form button:disabled { opacity: .5; cursor: wait; }
-.durum { color: var(--soluk); font-size: 14px; margin: 12px 0 0; min-height: 20px; }
-.ornek { font-size: 13px; color: var(--soluk); margin: 8px 0 0; }
-.ornek a { color: inherit; }
-</style></head><body>
-<header>
-  <h1>Oyun Risk Kartı</h1>
-  <p class="alt">Bir Google Play oyun bağlantısı yapıştır ya da oyunun adını yaz; yorumlar okunur ve kart üretilir (birkaç saniye).</p>
-  <form class="form" id="form">
-    <input id="q" placeholder="Oyun adı (ör. wild rift) ya da Google Play bağlantısı" aria-label="Oyun adı ya da Google Play bağlantısı" required>
-    <button id="btn">Kartı üret</button>
-  </form>
-  <p class="ornek">Örnek: <a href="#" data-q="com.miniclip.eightballpool">8 Ball Pool</a> ·
-     <a href="#" data-q="com.ustwo.monumentvalley2">Monument Valley 2</a> ·
-     <a href="#" data-q="com.king.candycrushsaga">Candy Crush Saga</a></p>
-  <p class="durum" id="durum"></p>
-</header>
-<p class="kural">Renk kuralı: tespit edilen her tuzak ağırlığı kadar puan ekler —
-  Variable Rewards 3; Advertisements, Wait To Play, Grinding 2; diğerleri 1.
-  0–1 puan yeşil, 2–4 sarı, 5 ve üstü kırmızı.
-  Puan sarıya düştüğü hâlde yorumların genel tonuna bakan model oyunu kırmızı görüyorsa kart kırmızı olur.</p>
-<main id="liste"></main>
-<footer>Kart oyuncu yorumlarından otomatik çıkarılmıştır; kesin hüküm değildir.
-  Model eğitimi: darkpattern.games oyuncu oyları (izinle, ticari olmayan kullanım).
-  Yorumlar ve mağaza bilgisi: Google Play.</footer>
-<script>
-const RENK = { yesil: "YEŞİL", sari: "SARI", kirmizi: "KIRMIZI" };
-__KART_JS__
-const durum = document.getElementById("durum"), btn = document.getElementById("btn");
-async function uret(q) {
-  btn.disabled = true; durum.textContent = "Yorumlar okunuyor…";
-  try {
-    const r = await fetch("/api/kart?q=" + encodeURIComponent(q));
-    const k = await r.json();
-    if (k.hata) { durum.textContent = "Hata: " + k.hata; return; }
-    durum.textContent = `${k.yorum_sayisi} yorum okundu.` + (k.not_ ? " " + k.not_ : "");
-    document.getElementById("liste").prepend(kartCiz(k));
-  } catch (e) { durum.textContent = "Bağlantı hatası: " + e; }
-  finally { btn.disabled = false; }
-}
-document.getElementById("form").addEventListener("submit", e => { e.preventDefault(); uret(document.getElementById("q").value.trim()); });
-document.querySelectorAll(".ornek a").forEach(a => a.addEventListener("click", e => {
-  e.preventDefault(); document.getElementById("q").value = a.dataset.q; uret(a.dataset.q); }));
-</script></body></html>""".replace("__CSS__", CSS).replace("__KART_JS__", KART_JS)
+# Arayüz ayrı dosyada: koleksiyon kartı görünümü, kapatma/geri alma, en çok 12 açık kart.
+SAYFA = Path(__file__).with_name("arayuz.html").read_text(encoding="utf-8")
+IKON = re.compile(r"^https://play-lh\.googleusercontent\.com/[\w\-./=]+$")   # yalnızca Google Play görselleri
 
 
 def paket_adi(q):
@@ -201,6 +147,8 @@ def kart_hazirla(q):
         notlar.append("Az yorum var; sonuç daha belirsiz.")
     k["not_"] = " ".join(notlar)
     k["oysuz"] = False
+    ikon = bilgi.get("icon") or ""
+    k["ikon"] = ikon if IKON.match(ikon) else None
     return k
 
 
@@ -211,7 +159,8 @@ class Istek(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(govde)))
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Content-Security-Policy",
-                         "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'")
+                         "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; "
+                         "img-src 'self' https://play-lh.googleusercontent.com")
         self.end_headers()
         if self.command != "HEAD":                      # HEAD: yalnızca başlıklar
             self.wfile.write(govde)
