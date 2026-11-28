@@ -176,6 +176,50 @@ def yesil_oneriler(tablo, mevcut, tur, yas, haric=None, adet=3):
     return sonuc
 
 
+# Kişiye özel öneri (canlı demo, "Bana oyun öner"): yalnızca yeşil kartlı oyunlar, hesap ya da kişisel veri yok.
+TUR_GRUP = {
+    "macera": ("Macera", {"GAME_ADVENTURE"}), "bulmaca": ("Bulmaca", {"GAME_PUZZLE", "GAME_WORD"}),
+    "strateji": ("Strateji", {"GAME_STRATEGY"}), "aksiyon": ("Aksiyon", {"GAME_ACTION", "GAME_ARCADE"}),
+    "simulasyon": ("Simülasyon", {"GAME_SIMULATION"}), "rol": ("Rol yapma", {"GAME_ROLE_PLAYING"}),
+    "spor": ("Spor ve yarış", {"GAME_SPORTS", "GAME_RACING"}), "kutu": ("Kutu ve kart", {"GAME_BOARD", "GAME_CARD", "GAME_TRIVIA"}),
+    "muzik": ("Müzik", {"GAME_MUSIC"}), "gundelik": ("Gündelik ve eğitici", {"GAME_CASUAL", "GAME_EDUCATIONAL"}),
+}
+YAS_GRUP = {"cocuk": 0, "on": 1, "genc": 2, "yetiskin": 9}     # 10 yaş altı, 10-12, 13-17, 18+
+BENZER_ESIK = 0.06
+
+
+def tur_adi(tur):
+    return next((ad for ad, kume in TUR_GRUP.values() if tur in kume), "Diğer")
+
+
+def kisisel_oneriler(tablo, yas_grubu, turler, sadece_ucretsiz, begenilen, haric=(), adet=6):
+    """Seçilen yaş, tür ve sevilen oyunlara göre yeşil kartlı oyunlar. begenilen: {paket: vektör}.
+    Kurallar: yaş derecesi gruptan sıkı değil, Play puanı >= 4.0, yetişkin değilse korku yok.
+    Sıra: seçilen türe uyum (+3), sevilen bir oyuna açıklama benzerliği (x12), Play puanı, indirme."""
+    oyunlar = (tablo or {}).get("oyunlar") or []
+    sinir = YAS_GRUP.get(yas_grubu, 0)
+    secili = set().union(*(TUR_GRUP[t][1] for t in turler if t in TUR_GRUP)) if turler else set()
+    aday = []
+    for a in oyunlar:
+        if a["play_id"] in haric or a["puan"] < 4.0 or YAS_SIRASI.get(a["yas"], 9) > sinir:
+            continue
+        if (a["korku"] and yas_grubu != "yetiskin") or (sadece_ucretsiz and not a["ucretsiz"]):
+            continue
+        tur_uyumu = a["tur"] in secili
+        b_paket, b = None, 0.0
+        for paket, v in begenilen.items():
+            x = benzerlik(v, a["vektor"])
+            if x > b:
+                b_paket, b = paket, x
+        benzer = b >= BENZER_ESIK
+        skor = 3 * tur_uyumu + 12 * b + .6 * (a["puan"] - 4) + .05 * math.log10(_indirme(a["indirme"]) + 1)
+        aday.append((skor, {"ad": a["ad"], "play_id": a["play_id"], "puan": round(a["puan"], 1), "ucretsiz": a["ucretsiz"],
+                            "yas_tr": YAS_TR.get(a["yas"], a["yas"]), "tur_ad": tur_adi(a["tur"]), "tur_uyumu": tur_uyumu,
+                            "benzedigi": b_paket if benzer else None, "benzerlik": round(b, 2)}))
+    aday.sort(key=lambda x: (-x[0], x[1]["ad"]))
+    return [o for _, o in aday[:adet]], len(aday)
+
+
 def ekle(kart, magaza, aciklama, tablo):
     """Kart sözlüğüne aile alanlarını ekler (yerinde)."""
     m = magaza or {}

@@ -289,6 +289,31 @@ form { width: 100%; max-width: 680px; margin: 0 auto; }
 .yesil-bolum .alts a, .yesil-bolum .alts div { background: var(--kart); }
 .oneri-turu { display: inline-block; margin-top: 3px; padding: 0 6px; border-radius: 5px; background: var(--yesil-zemin); color: var(--yesil-yazi); font-size: 11px; font-weight: 700; }
 .alts > div { display: flex; align-items: center; gap: 9px; min-height: 58px; padding: 7px; border: 1px solid var(--cizgi); border-radius: 10px; min-width: 0; }
+.oner h4 { margin: 14px 0 7px; font-size: 14px; }
+.oner h4:first-child { margin-top: 0; }
+.secimler { display: flex; flex-wrap: wrap; gap: 6px; }
+.secim { min-height: 40px; padding: 0 14px; border-radius: 99px; border: 1px solid var(--cizgi); background: var(--kart); color: var(--metin); font-size: 14px; }
+.secim[aria-pressed="true"] { background: var(--vurgu); color: var(--vurgu-yazi); border-color: var(--vurgu); font-weight: 600; }
+.secim[aria-pressed="true"]::before { content: "✓ "; }
+.oner .ipucu-yazi { margin: 0; color: var(--soluk); font-size: 13px; }
+.onay { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin-top: 8px; font-size: 14px; cursor: pointer; }
+.onay input { width: 20px; height: 20px; accent-color: var(--yesil); }
+.oner-btn { display: inline-flex; align-items: center; gap: 8px; height: 46px; margin-top: 12px; padding: 0 20px 2px 15px; border: 0; border-radius: 11px; color: #fff;
+  font-size: 15px; font-weight: 900; letter-spacing: .05em; text-shadow: 0 1px 1px rgba(10, 60, 22, .6); background: linear-gradient(#3f9f4c, #2b8439);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .34), 0 4px 0 #1e6229, 0 6px 10px rgba(20, 60, 28, .25); }
+.oner-btn svg { width: 20px; height: 20px; fill: #fff; }
+.oner-btn:active:not(:disabled) { transform: translateY(3px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .28), 0 1px 0 #1e6229; }
+.oner-btn:disabled { opacity: .68; cursor: wait; }
+.oner-durum { text-align: left; }
+.oner-sonuclar { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); gap: 9px; }
+.oner-oge { display: flex; gap: 11px; min-width: 0; padding: 10px; border: 1px solid var(--yesil); border-radius: 12px; background: var(--yesil-zemin); color: inherit; text-decoration: none; }
+.oner-oge:hover { filter: brightness(.98); }
+.oner-oge .ikon { --rz: var(--kart); --ry: var(--yesil-yazi); width: 58px; height: 58px; border-radius: 13px; font-size: 22px; }
+.oner-oge .m { min-width: 0; }
+.oner-oge b { display: block; font-size: 14.5px; line-height: 1.25; overflow-wrap: anywhere; }
+.oner-oge small { display: block; margin-top: 2px; color: var(--soluk); font-size: 12.5px; }
+.neden { display: inline-block; margin: 5px 4px 0 0; padding: 1px 7px; border-radius: 6px; background: var(--kart); color: var(--yesil-yazi); font-size: 11.5px; font-weight: 700; }
+.oner-not { grid-column: 1 / -1; margin: 4px 0 0; color: var(--soluk); font-size: 12.5px; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 </style>
 </head>
@@ -321,6 +346,16 @@ form { width: 100%; max-width: 680px; margin: 0 auto; }
         <li data-renk="kirmizi"><span class="rozet"><span>▲</span><span>KIRMIZI</span></span><span>Tuzak riski yüksek; süre sınırı koymak iyi olur.</span></li>
       </ul>
       <p class="bilgi-not">Kart bir tahmindir, oyun hakkında kesin hüküm değildir. Amaç oyunları yasaklamak değil, bilinçli seçim yapmana yardımcı olmak.</p>
+    </div>
+  </details>
+  <details class="bilgi oner" id="oner">
+    <summary><span class="bilgi-simge" aria-hidden="true">★</span><span>Bana oyun öner</span><span class="bilgi-ok" aria-hidden="true">⌄</span></summary>
+    <div class="bilgi-ic">
+      <p class="bilgi-giris">Birkaç soruyu yanıtla; sana uygun <b>yeşil kartlı</b> oyunları önerelim. Cevapların yalnızca bu tarayıcıda saklanır, hesap açman gerekmez.</p>
+      <div id="onerForm"></div>
+      <button class="oner-btn" id="onerBtn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 4.3v15.4a1.3 1.3 0 0 0 2 1.1l11.8-7.7a1.3 1.3 0 0 0 0-2.2L8.5 3.2a1.3 1.3 0 0 0-2 1.1z"/></svg><span>ÖNERİLERİ GÖSTER</span></button>
+      <p class="durum oner-durum" id="onerDurum" role="status"></p>
+      <div class="oner-sonuclar" id="onerSonuc"></div>
     </div>
   </details>
   <div class="arac">
@@ -515,6 +550,7 @@ function ciz() {
   $("sayac").textContent = `${kartlar.length} / ${SINIR} kart`;
   $("temizle").disabled = !kartlar.length;
   vurgulanan = null;
+  onerFormu();
 }
 function durum(yazi, hata) {
   $("durum").textContent = yazi || "";
@@ -758,6 +794,85 @@ $("tema").addEventListener("click", () => {
 let kayitliTema = null;
 try { kayitliTema = localStorage.getItem(TEMA); } catch (e) { /* depolama kapalı */ }
 temaYaz(kayitliTema === "dark" || kayitliTema === "light" ? kayitliTema : null);
+const TERCIH = "oyun-risk-tercih";
+const TURLER = [["macera", "Macera"], ["bulmaca", "Bulmaca"], ["strateji", "Strateji"], ["aksiyon", "Aksiyon"], ["simulasyon", "Simülasyon"],
+  ["rol", "Rol yapma"], ["spor", "Spor ve yarış"], ["kutu", "Kutu ve kart"], ["muzik", "Müzik"], ["gundelik", "Gündelik ve eğitici"]];
+const YASLAR = [["cocuk", "10 yaş altı"], ["on", "10–12"], ["genc", "13–17"], ["yetiskin", "18 ve üstü"]];
+function tercihOku() {
+  const bos = { yas: "cocuk", turler: [], ucretsiz: false, begen: [] };
+  try {
+    const v = JSON.parse(localStorage.getItem(TERCIH) || "{}");
+    return { yas: YASLAR.some(y => y[0] === v.yas) ? v.yas : "cocuk",
+             turler: Array.isArray(v.turler) ? v.turler.filter(t => TURLER.some(x => x[0] === t)) : [],
+             ucretsiz: v.ucretsiz === true,
+             begen: Array.isArray(v.begen) ? v.begen.filter(p => typeof p === "string" && PAKET.test(p)) : [] };
+  } catch (e) { return bos; }
+}
+let tercih = tercihOku();
+function tercihYaz() { try { localStorage.setItem(TERCIH, JSON.stringify(tercih)); } catch (e) { /* yalnızca bu oturumda kalır */ } }
+function secimDugmesi(etiket, secili, tikla) {
+  const b = el("button", "secim", etiket); b.type = "button";
+  b.setAttribute("aria-pressed", String(secili));
+  b.addEventListener("click", tikla);
+  return b;
+}
+function onerFormu() {
+  const f = $("onerForm");
+  if (!f) return;
+  const acik = new Set(kartlar.map(k => k.oyun_id));
+  tercih.begen = tercih.begen.filter(p => acik.has(p));
+  f.replaceChildren();
+  const g1 = el("div", "secimler"); g1.setAttribute("role", "group"); g1.setAttribute("aria-label", "Yaş grubu");
+  YASLAR.forEach(([d, ad]) => g1.append(secimDugmesi(ad, tercih.yas === d, () => { tercih.yas = d; tercihYaz(); onerFormu(); })));
+  const g2 = el("div", "secimler"); g2.setAttribute("role", "group"); g2.setAttribute("aria-label", "Sevdiğin türler");
+  TURLER.forEach(([d, ad]) => g2.append(secimDugmesi(ad, tercih.turler.includes(d), () => {
+    tercih.turler = tercih.turler.includes(d) ? tercih.turler.filter(x => x !== d) : [...tercih.turler, d]; tercihYaz(); onerFormu(); })));
+  const g3 = el("div", "secimler"); g3.setAttribute("role", "group"); g3.setAttribute("aria-label", "Sevdiğin oyunlar");
+  if (kartlar.length) {
+    kartlar.forEach(k => g3.append(secimDugmesi(k.ad, tercih.begen.includes(k.oyun_id), () => {
+      tercih.begen = tercih.begen.includes(k.oyun_id) ? tercih.begen.filter(x => x !== k.oyun_id) : [...tercih.begen, k.oyun_id].slice(-8); tercihYaz(); onerFormu(); })));
+  } else g3.append(el("p", "ipucu-yazi", "Yukarıdan bir oyunun kartını üretirsen burada “sevdiğim oyun” olarak seçebilirsin."));
+  const onay = el("label", "onay"), kutu = el("input");
+  kutu.type = "checkbox"; kutu.checked = tercih.ucretsiz;
+  kutu.addEventListener("change", () => { tercih.ucretsiz = kutu.checked; tercihYaz(); });
+  onay.append(kutu, document.createTextNode("Yalnızca ücretsiz oyunlar"));
+  f.append(el("h4", "", "Kaç yaşındasın?"), g1, el("h4", "", "Hangi türleri seversin? (istersen birkaç tane seç)"), g2,
+           el("h4", "", "Sevdiğin oyunlar (açık kartlarından)"), g3, onay);
+}
+async function oneriGetir() {
+  const btn = $("onerBtn"), sonuc = $("onerSonuc"), d = $("onerDurum");
+  btn.disabled = true; d.classList.remove("hata"); d.textContent = "Öneriler hazırlanıyor…"; sonuc.replaceChildren();
+  const p = new URLSearchParams({ yas: tercih.yas, tur: tercih.turler.join(","), ucretsiz: tercih.ucretsiz ? "1" : "0",
+                                  begen: tercih.begen.join(","), acik: kartlar.map(k => k.oyun_id).join(",") });
+  try {
+    const r = await fetch("/api/oneri?" + p.toString());
+    const j = await r.json();
+    if (j.hata || !Array.isArray(j.oneriler)) { d.textContent = j.hata || "Öneriler alınamadı."; d.classList.add("hata"); return; }
+    const adlar = Object.fromEntries(kartlar.map(k => [k.oyun_id, k.ad]));
+    if (!j.oneriler.length) {
+      d.textContent = "Bu seçimlere uyan yeşil kartlı oyun bulamadık. Yaş grubunu ya da “yalnızca ücretsiz” seçimini değiştirmeyi dene.";
+      return;
+    }
+    d.textContent = `${j.havuz} uygun yeşil oyun arasından sana en uygun ${j.oneriler.length} tanesi:`;
+    j.oneriler.forEach(o => {
+      const a = /^[\w.]+$/.test(o.play_id || "") ? el("a", "oner-oge") : el("div", "oner-oge");
+      if (a.tagName === "A") { a.href = "https://play.google.com/store/apps/details?id=" + o.play_id; a.target = "_blank"; a.rel = "noopener noreferrer"; }
+      const m = el("span", "m"), bilgi = ["★ " + sayi(o.puan), o.yas_tr, o.ucretsiz ? "ücretsiz" : "ücretli", o.tur_ad].filter(Boolean);
+      m.append(el("b", "", o.ad), el("small", "", bilgi.join(" · ")));
+      if (o.tur_uyumu) m.append(el("span", "neden", "Sevdiğin tür: " + o.tur_ad));
+      if (o.benzedigi && adlar[o.benzedigi]) m.append(el("span", "neden", "Benzer: " + adlar[o.benzedigi]));
+      if (!o.tur_uyumu && !o.benzedigi) m.append(el("span", "neden", "Yüksek puanlı yeşil oyun"));
+      a.append(gorsel(o.ikon ? o : null, o.ad), m);
+      sonuc.append(a);
+    });
+    const not = el("p", "oner-not", "Önerilerin hepsi yeşil kartlı: yorumlarda az tuzak bulundu demektir, tamamen tuzaksız demek değildir.");
+    if (j.eksik && j.eksik.length) not.textContent += " " + j.eksik.map(x => adlar[x] || x).join(", ") + " için benzerlik hesaplanamadı; kartını yeniden üretirsen hesaba katılır.";
+    sonuc.append(not);
+  } catch (e) {
+    d.textContent = "Sunucuya ulaşılamadı. Bağlantını kontrol edip tekrar dene."; d.classList.add("hata");
+  } finally { btn.disabled = false; }
+}
+$("onerBtn").addEventListener("click", oneriGetir);
 const BILGI = "oyun-risk-bilgi-kapali";
 try { if (localStorage.getItem(BILGI) === "1") $("bilgi").open = false; } catch (e) { /* depolama kapalı: kart açık kalır */ }
 $("bilgi").addEventListener("toggle", () => {

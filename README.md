@@ -87,6 +87,9 @@ Each card also has a "For families" box (`src/aile.py`); it never changes the co
   Teen, Play rating ≥ 4.0, no horror, same genre first); these may not resemble the original game. On the 233 red
   development cards, 362 of the 699 suggestions are general. The list of green games stays out of this repository
   because it is derived from the vote data, so without it the demo shows a letter instead of the game icon.
+- **Recommend me a game** (live demo): age group, favourite genres, liked games among the open cards and a
+  free-only option give six green-card suggestions with the reason for each. Answers stay in the browser and
+  recommendation requests are not logged. Usefulness has not been tested with users.
 - Adding the 347 iOS games to training changed Play AUC by only +0.003 on average
   (`src/27_ios_ekleme_kontrolu.py`), so the system was kept as is and the test set stays clean.
 

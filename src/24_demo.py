@@ -41,6 +41,10 @@ ONBELLEK, ISTEKLER = {}, {}
 SISTEM = sistem_mod.sistemi_yukle()
 _ikon_dosya = VERI / "model" / "yesil_ikonlar.json"      # öneri kartlarının görselleri (dosya yoksa harf gösterilir)
 YESIL_IKON = json.load(open(_ikon_dosya, encoding="utf-8")) if _ikon_dosya.exists() else {}
+_TABLO = SISTEM.get("alternatifler") or {}
+TABLO_VEKTOR = {a["play_id"]: a["vektor"] for a in _TABLO.get("oyunlar", [])}
+TARANAN_VEKTOR = {}                 # kartı üretilen oyunların açıklama vektörü (oyun bazında; kişi bilgisi yok)
+ONERI_ISTEK, ONERI_DAKIKA = {}, 20  # "Bana oyun öner": adres başına dakikada en çok 20 istek
 PAKET = re.compile(r"^[A-Za-z][\w]*(\.[A-Za-z_][\w]*)+$")
 KAYIT = VERI / "demo_kayit.csv"          # her isteğin kaydı (izleme için); yorum metni yazılmaz
 KAYIT_KILIDI = threading.Lock()
@@ -142,6 +146,11 @@ def kart_hazirla(q):
               "play_yas": bilgi.get("contentRating"), "play_tur": bilgi.get("genreId"), "play_id": paket}
     aciklama = (bilgi.get("summary") or "") + " " + veri_seti.html_temizle(bilgi.get("description"))
     k = sistem_mod.kart_uret(SISTEM, paket, bilgi.get("title") or paket, yorumlar, aciklama, magaza)
+    if _TABLO.get("idf"):
+        with KAYIT_KILIDI:
+            if len(TARANAN_VEKTOR) >= 2000:
+                TARANAN_VEKTOR.pop(next(iter(TARANAN_VEKTOR)))
+            TARANAN_VEKTOR[paket] = aile.vektor(aciklama, _TABLO["idf"])
     notlar = []
     if arama:
         notlar.append(f"“{arama}” araması: ilk oyun sonucu {bilgi.get('title') or paket} seçildi.")
@@ -177,19 +186,41 @@ class Istek(BaseHTTPRequestHandler):
         if self.command != "HEAD":                      # HEAD: yalnızca başlıklar
             self.wfile.write(govde)
 
-    def _izin_var(self):
+    def _izin_var(self, kayitlar=None, sinir=None):
         """Adres başına dakikalık istek sınırı. Vekil sunucu arkasında gerçek adres X-Forwarded-For'dadır."""
+        kayitlar = ISTEKLER if kayitlar is None else kayitlar
+        sinir = DAKIKADA_ISTEK if sinir is None else sinir
         adres = (self.headers.get("X-Forwarded-For") or self.client_address[0]).split(",")[0].strip()
         simdi = time.time()
         with KAYIT_KILIDI:
-            son = [t for t in ISTEKLER.get(adres, []) if simdi - t < 60]
-            izin = len(son) < DAKIKADA_ISTEK
+            son = [t for t in kayitlar.get(adres, []) if simdi - t < 60]
+            izin = len(son) < sinir
             if izin:
                 son.append(simdi)
-            ISTEKLER[adres] = son
-            if len(ISTEKLER) > 5000:                        # bellek şişmesin
-                ISTEKLER.clear()
+            kayitlar[adres] = son
+            if len(kayitlar) > 5000:                        # bellek şişmesin
+                kayitlar.clear()
         return izin
+
+    def _oneri(self, sorgu):
+        """Bana oyun öner: yaş grubu, türler, yalnız ücretsiz, sevilen oyunlar (paket adları). Hiçbir şey kaydedilmez."""
+        al = lambda ad: sorgu.get(ad, [""])[0][:600]
+        yas = al("yas") if al("yas") in aile.YAS_GRUP else "cocuk"
+        turler = [t for t in al("tur").split(",") if t in aile.TUR_GRUP][:10]
+        begen = [p for p in al("begen").split(",") if PAKET.match(p)][:8]
+        acik = [p for p in al("acik").split(",") if PAKET.match(p)][:12]
+        vektor, eksik = {}, []
+        for p in begen:
+            v = TARANAN_VEKTOR.get(p) or TABLO_VEKTOR.get(p)
+            if v:
+                vektor[p] = v
+            else:
+                eksik.append(p)
+        liste, havuz = aile.kisisel_oneriler(_TABLO, yas, turler, al("ucretsiz") == "1", vektor, set(acik) | set(begen))
+        for o in liste:
+            u = YESIL_IKON.get(o["play_id"]) or ""
+            o["ikon"] = u if IKON.match(u) else None
+        return {"oneriler": liste, "havuz": havuz, "eksik": eksik}
 
     def do_GET(self):
         u = urlparse(self.path)
@@ -217,6 +248,10 @@ class Istek(BaseHTTPRequestHandler):
                             ONBELLEK.pop(min(ONBELLEK, key=lambda k: ONBELLEK[k][0]))
                         ONBELLEK[paket] = (basla, sonuc)
             kaydet(sonuc.get("oyun_id") or paket, sonuc, time.time() - basla)
+            self._yaz(200, "application/json", json.dumps(sonuc, ensure_ascii=False).encode("utf-8"))
+        elif u.path == "/api/oneri":
+            sonuc = (self._oneri(parse_qs(u.query)) if self._izin_var(ONERI_ISTEK, ONERI_DAKIKA)
+                     else {"hata": "Çok fazla istek. Lütfen bir dakika sonra tekrar deneyin."})
             self._yaz(200, "application/json", json.dumps(sonuc, ensure_ascii=False).encode("utf-8"))
         elif u.path == "/api/durum":                        # sağlık kontrolü + sayaçlar
             self._yaz(200, "application/json", json.dumps({"durum": "hazir", **SAYAC}).encode("utf-8"))
